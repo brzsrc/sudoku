@@ -6,9 +6,9 @@ def check_easy_cases(clauses, symbols, solver):
     for clause in clauses:
         #unit clause: {literal}
         if len(clause) == 1:
-            # clauses.remove(clause)
-            # print(f"clauses: {clauses}")
             literal = clause.copy().pop()
+            if('132' == literal or '-132' == literal):
+                print(f"easy_case_neg: 11: {literal}")      
             if literal[0] == '-':
                 if literal[1:] not in solver:
                     solver[literal[1:]] = False
@@ -30,18 +30,19 @@ def dpll(solver: Dict, clauses: List[Set], symbols: List[str]):
         return solver, False
     
     #a list of symbols
-    easy_cases = check_easy_cases(clauses, symbols, solver)    
+    easy_cases = check_easy_cases(clauses, symbols, solver)  
+
+    if('132' in easy_cases):
+        print(f"easy_case_neg: clauses 34: {clauses}")      
 
     while(len(easy_cases) != 0):
         #simplify
-        # print(easy_cases)
         for easy_case in easy_cases:
-            if(easy_case == '132'):
-                    print(f"easy_case_neg: clauses: {clauses}")
-            for clause in clauses:
-                if(clause == {'-132', '-133'}):
-                    print(f"easy_case_neg: ") 
+            #clauses.copy(): keep the old clauses for lopp while we need to remove literal from clauses
+            for clause in clauses.copy():
                 #check if this clause contains the easy_case literal
+                if(easy_case == '132' and clause == {'-132', '-133'}):
+                    print(f"easy_case_neg: clause 39: {clause}")
                 if(easy_case in clause):
                     if(solver[easy_case] == True):
                         clauses.remove(clause)
@@ -50,21 +51,20 @@ def dpll(solver: Dict, clauses: List[Set], symbols: List[str]):
 
                 easy_case_neg = '-'+easy_case        
                 if(easy_case_neg in clause):
-                    print(f"easy_case_neg: {easy_case_neg}")
-                    if(easy_case_neg == '-132'):
-                        print(f"easy_case_neg: solver: {solver[easy_case]}")
                     if(solver[easy_case] == False):
                         clauses.remove(clause)
                     else:
-                        if(easy_case_neg == '-132'):
+                        if(easy_case_neg == '-132' and clause == {'-132', '-133'}):
                             print(f"easy_case_neg: clause before: {clause}")
                         clause.remove(easy_case_neg)    
-                        if(easy_case_neg == '-132'):
+                        if(easy_case_neg == '-132' and clause == {'-132', '-133'}):
                             print(f"easy_case_neg: clause after: {clause}")
                 if len(clause) == 0:
                     return solver, False
 
         easy_cases = check_easy_cases(clauses, symbols, solver)    
+        if('132' in easy_cases):
+            print(f"easy_case_neg: clauses 34: {clauses}")   
 
     print(f"solver: {solver}")
     print(f"clauses: {clauses}")
