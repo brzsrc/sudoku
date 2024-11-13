@@ -35,7 +35,7 @@ def fbf_parser(state_file,rule_file):
             else:
                 repetition_rule.append(i)
 
-    with open("test","w") as t:
+    with open("test_4by4", "w") as t:
         t.write("p cnf 444 448\n")
         for i in cnf_list:
             t.write(f"{i} \n")
