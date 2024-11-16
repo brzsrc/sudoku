@@ -1,5 +1,5 @@
 from typing import Dict, List, Set, Tuple
-from DIMACS_output import tt_to_dimacs, save_dimacs
+from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader
 
 
 def check_unit_clauses(clauses: List[Set[str]], symbols: List[str], solver: Dict[str, bool]):
@@ -203,6 +203,9 @@ if __name__ == '__main__':
                         '424', '132', '214', '111', '312', '433', '222', '314', '432', '211', '123', '142', '234',
                         '321', '342', '131', '441', '143', '322', '243', '133', '421', '444', '412', '223'}
     solver, if_solved = dpll({}, sudoku_clauses_4, sudoku_symbols_4)
+
+    # symbols, clauses = DIMACS_reader("testsets/4x4.txt")
+    # solver, if_solved = dpll({}, clauses, symbols)
     print(if_solved)
     print(solver)
     dimacs_content = tt_to_dimacs(solver)
