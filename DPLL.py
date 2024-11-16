@@ -1,3 +1,4 @@
+import os
 from typing import Dict, List, Set, Tuple
 from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS
 from SAT_solver_bk import dpll as dpll2
@@ -216,23 +217,26 @@ if __name__ == '__main__':
 
 
     # 9*9
-    to_DIMACS(9,"testsets/1000 sudokus.txt","sudoku-rules-9x9.txt")
-    symbols, clauses = DIMACS_reader("9by9.cnf")
-    print(len(symbols),len(clauses))
-    solver, if_solved = dpll2({}, clauses, symbols)
+    # to_DIMACS(9,"testsets/1000 sudokus.txt","sudoku-rules-9x9.txt")
+    # symbols, clauses = DIMACS_reader("9by9.cnf")
+    # print(len(symbols),len(clauses))
+    # solver, if_solved = dpll2({}, clauses, symbols)
 
 
     ## 4*4
-    # to_DIMACS(4,"1000 sudokus.txt","sudoku-rules-9x9.txt")
-    # symbols, clauses = DIMACS_reader("4by4.cnf")
-    # print(len(symbols),len(clauses))
-    # solver, if_solved = dpll({}, clauses, symbols)
+    # to_DIMACS(4,"4x4.txt","sudoku-rules-4x4.txt")
+    cnf_files = os.listdir("4by4_cnf")
+    for i in cnf_files:
+        symbols, clauses = DIMACS_reader(f"4by4_cnf/{i}")
+        print(len(symbols),len(clauses))
+        solver, if_solved = dpll2({}, clauses, symbols)
+        # print(if_solved)
+        # print(solver)
+        dimacs_content = tt_to_dimacs(solver)
+        save_dimacs(dimacs_content, f'{i}_solution')
 
 
 
-    print(if_solved)
-    print(solver)
-    dimacs_content = tt_to_dimacs(solver)
-    save_dimacs(dimacs_content,'testout')
+
 
 

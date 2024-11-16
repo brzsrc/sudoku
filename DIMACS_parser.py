@@ -1,25 +1,30 @@
 from typing import Dict, List, Set, Tuple
 import numpy as np
+import os
 # from DPLL import dpll
 
 def to_DIMACS(size,state_file,rule_file):
     # the rows num of out_file of 4*4 is 455 = 1 + 6 + 7*(4*4*4)
     # the rows num of out_file of 9*9 is 12010 = 1 + 21 + 37*(9*9*4)
 
+
+
     #for states
+    cnf_list = []
     with open(state_file,"r") as s:
         a = s.readlines()
-        # for line in a:
-        state = [list(a[0][size*i:size*(i+1)]) for i in range(size)]
-        board = np.array([["_" if j == "." else j  for j in row] for row in state])
-        state_ind = np.argwhere(board != "_")
-        cnf_list = []
-        for i in state_ind:
-            #take each given number
-            num = board[i[0],i[1]]
-            # cnf form
-            cnf = f"{i[0]+1}{i[1]+1}{num} 0"
-            cnf_list.append(cnf)
+        for line in a:
+            state = [list(line[size*i:size*(i+1)]) for i in range(size)]
+            board = np.array([["_" if j == "." else j  for j in row] for row in state])
+            state_ind = np.argwhere(board != "_")
+            sate_list = []
+            for i in state_ind:
+                #take each given number
+                num = board[i[0],i[1]]
+                # cnf form
+                cnf = f"{i[0]+1}{i[1]+1}{num} 0"
+                sate_list.append(cnf)
+            cnf_list.append(sate_list)
 
     #for rules
     with open(rule_file, "r") as r:
@@ -36,14 +41,15 @@ def to_DIMACS(size,state_file,rule_file):
             else:
                 repetition_rule.append(i)
 
-    with open(f"{size}by{size}.cnf","w") as t:
-        t.write(f"p cnf {size}{size}{size} {len(cnf_list) + len(exist_rule) + len(repetition_rule)}\n")
-        for i in cnf_list:
-            t.write(f"{i} \n")
-        for i in exist_rule:
-            t.write(f"{i}")
-        for i in repetition_rule:
-            t.write(f"{i}")
+    for i in range(len(cnf_list)):
+        with open(f"{size}by{size}_cnf/{size}by{size}_{i+1}.cnf","w") as t:
+            t.write(f"p cnf {size}{size}{size} {len(cnf_list) + len(exist_rule) + len(repetition_rule)}\n")
+            for i in cnf_list[i]:
+                t.write(f"{i} \n")
+            for i in exist_rule:
+                t.write(f"{i}")
+            for i in repetition_rule:
+                t.write(f"{i}")
 
 def DIMACS_reader(file):
     #within 10*10 puzzle
