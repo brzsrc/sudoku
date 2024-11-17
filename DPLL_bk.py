@@ -1,7 +1,7 @@
 import os
 from typing import Dict, List, Set, Tuple
 from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS
-from dpll import dpll as dpll2
+from DPLL import dpll as dpll2
 
 def check_unit_clauses(clauses: List[Set[str]], symbols: List[str], solver: Dict[str, bool]):
     """

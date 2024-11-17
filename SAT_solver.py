@@ -1,7 +1,7 @@
 import os
 from typing import Dict, List, Set, Tuple
 from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS
-from dpll import dpll
+from DPLL import dpll
 
 if __name__ == '__main__':
     '''
@@ -158,7 +158,13 @@ if __name__ == '__main__':
 # dimacs_content = tt_to_dimacs(solver)
 # save_dimacs(dimacs_content, f'4by4_cnf_1.cnf_solution')
     
-
+symbols, clauses = DIMACS_reader(f"4by4_cnf/4by4_1.cnf")
+# print(len(symbols),len(clauses))
+solver, if_solved = dpll({}, clauses, symbols, 'mom')
+# print(if_solved)
+# print(solver)
+dimacs_content = tt_to_dimacs(solver)
+save_dimacs(dimacs_content, f'4by4_cnf_1.cnf_solution_mom')
 
 
 
