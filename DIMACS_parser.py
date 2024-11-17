@@ -7,8 +7,6 @@ def to_DIMACS(size,state_file,rule_file):
     # the rows num of out_file of 4*4 is 455 = 1 + 6 + 7*(4*4*4)
     # the rows num of out_file of 9*9 is 12010 = 1 + 21 + 37*(9*9*4)
 
-
-
     #for states
     cnf_list = []
     with open(state_file,"r") as s:
