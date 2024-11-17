@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 from typing import List, Dict, Set
 from heuristics import jw_os, jw_ts, mom
 
@@ -97,3 +98,5 @@ def dpll(solver: Dict, clauses: List[Set], symbols: List[str], heuristics: str =
         return solver_fst, True
     else:
         return dpll(solver, clauses_snd, symbols)
+=======
+>>>>>>> Stashed changes
