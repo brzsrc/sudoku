@@ -1,5 +1,7 @@
 from typing import List, Dict, Set
 from heuristics import jw_os, jw_ts, mom
+import os
+from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS,to_DIMACS_Sixteen,DIMACS_reader_Sixteen
 
 def check_easy_cases(clauses, symbols, solver):
     #a list of symbols
@@ -8,6 +10,8 @@ def check_easy_cases(clauses, symbols, solver):
         #unit clause: {literal}
         if len(clause) == 1:
             literal = clause.copy().pop()    
+            if literal == '866' or literal == '-866':
+                print(f"literal: {literal}")
             if literal[0] == '-':
                 if literal[1:] not in solver:
                     solver[literal[1:]] = False
@@ -95,4 +99,11 @@ def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 
         return solver_fst, True
     else:
         return dpll(solver, clauses_snd, symbols)
+    
+
+if __name__ == '__main__':
+    symbols, clauses = DIMACS_reader_Sixteen(f"16by16_cnf/16by16_1.cnf")
+    print('307' in symbols)
+    solver, if_solved = dpll({}, clauses, symbols)
+        
 

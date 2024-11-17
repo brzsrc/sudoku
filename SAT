@@ -1,0 +1,2 @@
+#!/bin/bash
+python SAT_solver.py $1 $2
