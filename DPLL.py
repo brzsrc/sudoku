@@ -1,5 +1,5 @@
 from typing import List, Dict, Set
-from heuristics import jw_os, jw_ts
+from heuristics import jw_os, jw_ts, mom
 
 def check_easy_cases(clauses, symbols, solver):
     #a list of symbols
@@ -22,29 +22,26 @@ def check_easy_cases(clauses, symbols, solver):
 
 
 def split(clauses: List[Set], symbols: List[str], heuristics:str = 'rand'):
+    print("aaaaaaaa")
     if(heuristics == 'jw_os'):
         symbol, is_true = jw_os(clauses, symbols)
-        if(is_true):
-            clauses_fst = clauses + [{symbol}]
-            clauses_snd = clauses + [{'-'+symbol}]
-        else:
-            clauses_fst = clauses + [{'-'+symbol}]
-            clauses_snd = clauses + [{symbol}]
     elif(heuristics == 'jw_ts'):
         symbol, is_true = jw_ts(clauses, symbols)
-        if(is_true):
-            clauses_fst = clauses + [{symbol}]
-            clauses_snd = clauses + [{'-'+symbol}]
-        else:
-            clauses_fst = clauses + [{'-'+symbol}]
-            clauses_snd = clauses + [{symbol}]
+        print(symbol, is_true)
     elif(heuristics == 'mom'):    
+        # symbol, is_true = mom(clauses, symbols, 2)
         pass
     else:
         #heuristics is 'rand':
         symbol = symbols.copy().pop()
+        is_true = True
+    if(is_true):
         clauses_fst = clauses + [{symbol}]
         clauses_snd = clauses + [{'-'+symbol}]
+    else:
+        clauses_fst = clauses + [{'-'+symbol}]
+        clauses_snd = clauses + [{symbol}]
+    
     return clauses_fst, clauses_snd
 
 
@@ -82,11 +79,13 @@ def dpll(solver: Dict, clauses: List[Set], symbols: List[str], heuristics: str =
 
         easy_cases = check_easy_cases(clauses, symbols, solver)    
 
+    print("cccccc")
     #split
     if(len(symbols) != 0): 
         # symbol = symbols.copy().pop()
         # clauses_pos = clauses + [{symbol}]
         # clauses_neg = clauses + [{'-'+symbol}]
+        print("bbbbbbbbb")
         clauses_fst, clauses_snd = split(clauses, symbols, heuristics)
     else:    
         assert len(clauses) == 0

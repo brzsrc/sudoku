@@ -39,4 +39,7 @@ def jw_ts(clauses: List[Set], symbols: List[str]):
         return symbols[max_idx], True
     else:
         return symbols[max_idx], False    
+    
+def mom(clauses: List[Set], symbols: List[str], k:int):
+    pass
 
