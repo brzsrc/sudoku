@@ -132,9 +132,15 @@ if __name__ == '__main__':
 
     # 9*9
     # to_DIMACS(9,"testsets/1000 sudokus.txt","sudoku-rules-9x9.txt")
-    # symbols, clauses = DIMACS_reader("9by9.cnf")
-    # print(len(symbols),len(clauses))
-    # solver, if_solved = dpll({}, clauses, symbols)
+    cnf_files = os.listdir("9by9_cnf")
+    for i in cnf_files:
+        symbols, clauses = DIMACS_reader(f"9by9_cnf/{i}")
+        print(len(symbols), len(clauses))
+        solver, if_solved = dpll({}, clauses, symbols)
+        # print(if_solved)
+        # print(solver)
+        dimacs_content = tt_to_dimacs(solver)
+        save_dimacs(dimacs_content, f'{i}_solution')
 
 
     ## 4*4
@@ -150,21 +156,7 @@ if __name__ == '__main__':
         dimacs_content = tt_to_dimacs(solver)
         save_dimacs(dimacs_content, f'{i}_solution')
 
-# symbols, clauses = DIMACS_reader(f"4by4_cnf/4by4_1.cnf")
-# # print(len(symbols),len(clauses))
-# solver, if_solved = dpll({}, clauses, symbols, 'jw_ts')
-# # print(if_solved)
-# # print(solver)
-# dimacs_content = tt_to_dimacs(solver)
-# save_dimacs(dimacs_content, f'4by4_cnf_1.cnf_solution')
-    
-symbols, clauses = DIMACS_reader(f"4by4_cnf/4by4_1.cnf")
-# print(len(symbols),len(clauses))
-solver, if_solved = dpll({}, clauses, symbols, 'mom')
-# print(if_solved)
-# print(solver)
-dimacs_content = tt_to_dimacs(solver)
-save_dimacs(dimacs_content, f'4by4_cnf_1.cnf_solution_mom')
+
 
 
 
