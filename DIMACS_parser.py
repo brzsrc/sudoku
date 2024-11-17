@@ -117,8 +117,8 @@ def DIMACS_reader_Sixteen(file):
         symbols = set()
         for row in range(16):
             for column in range(16):
-                for value in range(16):
-                        symbols.add(str(17 * 17 * (row + 1) + 17 * (column + 1) + value))
+                for value in range(17):
+                        symbols.add(str(17 * 17 * (row + 1 +1) + 17 * (column + 1+1) + value))
 
         clauses = []
         for line in lines[1:]:
