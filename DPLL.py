@@ -21,15 +21,15 @@ def check_easy_cases(clauses, symbols, solver):
     return  easy_cases
 
 
-def split(clauses: List[Set], symbols: List[str], heuristics:str = 'rand'):
-    print("aaaaaaaa")
+def split(clauses: List[Set], symbols: Set[str], heuristics:str = 'rand'):
+    symbol_list = list(symbols)
     if(heuristics == 'jw_os'):
-        symbol, is_true = jw_os(clauses, symbols)
+        symbol, is_true = jw_os(clauses, symbol_list)
     elif(heuristics == 'jw_ts'):
-        symbol, is_true = jw_ts(clauses, symbols)
+        symbol, is_true = jw_ts(clauses, symbol_list)
         print(symbol, is_true)
     elif(heuristics == 'mom'):    
-        # symbol, is_true = mom(clauses, symbols, 2)
+        symbol, is_true = mom(clauses, symbol_list, 2)
         pass
     else:
         #heuristics is 'rand':
@@ -46,7 +46,7 @@ def split(clauses: List[Set], symbols: List[str], heuristics:str = 'rand'):
 
 
 
-def dpll(solver: Dict, clauses: List[Set], symbols: List[str], heuristics: str = 'rand'):
+def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 'rand'):
     if len(clauses) == 0:
         return solver, True
     
@@ -79,13 +79,11 @@ def dpll(solver: Dict, clauses: List[Set], symbols: List[str], heuristics: str =
 
         easy_cases = check_easy_cases(clauses, symbols, solver)    
 
-    print("cccccc")
     #split
     if(len(symbols) != 0): 
         # symbol = symbols.copy().pop()
         # clauses_pos = clauses + [{symbol}]
         # clauses_neg = clauses + [{'-'+symbol}]
-        print("bbbbbbbbb")
         clauses_fst, clauses_snd = split(clauses, symbols, heuristics)
     else:    
         assert len(clauses) == 0
