@@ -3,6 +3,65 @@ import numpy as np
 import os
 # from DPLL import dpll
 
+def to_DIMACS_Sixteen(state_file,rule_file):
+    # the rows num of out_file of 4*4 is 455 = 1 + 6 + 7*(4*4*4)
+    # the rows num of out_file of 9*9 is 12010 = 1 + 21 + 37*(9*9*4)
+
+
+
+    #for states
+    cnf_list = []
+    with open(state_file,"r") as s:
+        a = s.readlines()
+        for line in a:
+            state = [list(line[16*i:16*(i+1)]) for i in range(16)]
+            board = np.array([["_" if j == "." else j for j in row] for row in state])
+            state_ind = np.argwhere(board != "_")
+            sate_list = []
+            value_dic = {"A":"10","B":"11","C":"12","D":"13","E":"14","F":"15","G":"16"}
+            for i in state_ind:
+                #take each given number
+                num = board[i[0],i[1]]
+                try:
+                    num = int(num)
+                    cnf = f"{17 * 17 * (i[0] + 1) + 17 * (i[1] + 1) + num} 0"
+                except:
+                    num = int(value_dic[num])
+                    cnf = f"{17 * 17 * (i[0] + 1) + 17 * (i[1] + 1) + num} 0"
+                # cnf form
+
+                sate_list.append(cnf)
+            cnf_list.append(sate_list)
+
+    #for rules
+    with open(rule_file, "r") as r:
+        lines = r.readlines()
+        exist_rule = []
+        repetition_rule = []
+        for i in lines:
+            a = i.split(" ")
+
+            if "p" in a:
+                pass
+            elif len(a) == 16 + 1:
+                exist_rule.append(i)
+            else:
+                repetition_rule.append(i)
+    try:
+        os.makedirs(f"{16}by{16}_cnf")
+    except:
+        pass
+    for i in range(len(cnf_list)):
+        with open(f"{16}by{16}_cnf/{16}by{16}_{i+1}.cnf","w") as t:
+            t.write(f"p cnf {16}{16}{16} {len(cnf_list) + len(exist_rule) + len(repetition_rule)}\n")
+            for i in cnf_list[i]:
+                t.write(f"{i} \n")
+            for i in exist_rule:
+                t.write(f"{i}")
+            for i in repetition_rule:
+                t.write(f"{i}")
+
+
 def to_DIMACS(size,state_file,rule_file):
     # the rows num of out_file of 4*4 is 455 = 1 + 6 + 7*(4*4*4)
     # the rows num of out_file of 9*9 is 12010 = 1 + 21 + 37*(9*9*4)
@@ -48,6 +107,27 @@ def to_DIMACS(size,state_file,rule_file):
                 t.write(f"{i}")
             for i in repetition_rule:
                 t.write(f"{i}")
+
+
+
+def DIMACS_reader_Sixteen(file):
+    with open(file,"r") as f:
+        lines = f.readlines()
+
+        symbols = set()
+        for row in range(16):
+            for column in range(16):
+                for value in range(16):
+                        symbols.add(str(17 * 17 * (row + 1) + 17 * (column + 1) + value))
+
+        clauses = []
+        for line in lines[1:]:
+            clause = line[:-1].split(" ")
+            end_point = clause.index("0")
+            clause = clause[:end_point]
+            clauses.append(set(clause))
+
+        return symbols, clauses
 
 def DIMACS_reader(file):
     #within 10*10 puzzle
