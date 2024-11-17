@@ -38,7 +38,7 @@ def to_DIMACS(size,state_file,rule_file):
                 exist_rule.append(i)
             else:
                 repetition_rule.append(i)
-
+    os.makedirs(f"{size}by{size}_cnf")
     for i in range(len(cnf_list)):
         with open(f"{size}by{size}_cnf/{size}by{size}_{i+1}.cnf","w") as t:
             t.write(f"p cnf {size}{size}{size} {len(cnf_list) + len(exist_rule) + len(repetition_rule)}\n")
