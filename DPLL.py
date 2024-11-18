@@ -148,7 +148,7 @@ if __name__ == '__main__':
         solver, if_solved = dpll({}, clauses, symbols, 'mom')
         print(if_solved)
         # print(solver)
-        dimacs_content = tt_to_dimacs(solver)
+        dimacs_content = tt_to_dimacs(solver,if_solved)
         save_dimacs(dimacs_content, f'{i}_solution')
         
 

@@ -33,8 +33,8 @@ if __name__ == '__main__':
     solver, if_solved = dpll({}, clauses, symbols, sn)
     print(if_solved)
     print(solver)
-    dimacs_content = tt_to_dimacs(solver)
-    save_dimacs(dimacs_content,'ssr/test')
+    dimacs_content = tt_to_dimacs(solver, if_solved)
+    save_dimacs(dimacs_content,'test')
 
     # 9*9
     # to_DIMACS(9,"testsets/1000 sudokus.txt","sudoku-rules-9x9.txt")
@@ -46,7 +46,7 @@ if __name__ == '__main__':
     #     solver, if_solved = dpll({}, clauses, symbols, 'mom')
     #     # print(if_solved)
     #     # print(solver)
-    #     dimacs_content = tt_to_dimacs(solver)
+    #     dimacs_content = tt_to_dimacs(solver,if_solved)
     #     save_dimacs(dimacs_content, f'{i}_solution')
 
 
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     # for i in cnf_files:
     #     symbols, clauses = DIMACS_reader(f"4by4_cnf/{i}")
     #     solver, if_solved = dpll({}, clauses, symbols, 'jw_ts')
-    #     dimacs_content = tt_to_dimacs(solver)
+    #     dimacs_content = tt_to_dimacs(solver, if_solved)
     #     save_dimacs(dimacs_content, f'{i}_solution')
 
 
