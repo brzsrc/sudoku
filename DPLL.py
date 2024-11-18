@@ -137,18 +137,44 @@ def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 
     
 
 if __name__ == '__main__':
-    # symbols, clauses = DIMACS_reader_Sixteen(f"16by16_cnf/16by16_1.cnf")
-    # print('307' in symbols)
+    # to_DIMACS_Sixteen("16by16_online/1.txt","sudoku-rules-16x16.txt")
+    # symbols, clauses = DIMACS_reader_Sixteen(f"16by16_cnf2/16by16_1.cnf")
     # solver, if_solved = dpll({}, clauses, symbols, 'jw_os')
+    # print(if_solved)
+    # # print(solver)
+    # dimacs_content = tt_to_dimacs(solver)
+    # save_dimacs(dimacs_content, f'16by16_online/solution')
 
+
+    ## 4*4
+    # to_DIMACS(4,"4x4.txt","sudoku-rules-4x4.txt")    
+    # cnf_files = os.listdir("4by4_cnf")
+    # for i in cnf_files:
+    #     symbols, clauses = DIMACS_reader(f"4by4_cnf/{i}")
+    #     solver, if_solved = dpll({}, clauses, symbols, 'jw_ts')
+    #     dimacs_content = tt_to_dimacs(solver)
+    #     save_dimacs(dimacs_content, f'4by4/{i}_solution')
+
+    # 9*9
+    # to_DIMACS(9,"testsets/1000 sudokus.txt","sudoku-rules-9x9.txt")
     cnf_files = os.listdir("9by9_cnf")
     for i in cnf_files:
         symbols, clauses = DIMACS_reader(f"9by9_cnf/{i}")
-        print(len(symbols), len(clauses))
-        solver, if_solved = dpll({}, clauses, symbols, 'mom')
+        # print(len(symbols), len(clauses))
+        solver, if_solved = dpll({}, clauses, symbols, 'rand')
         print(if_solved)
         # print(solver)
         dimacs_content = tt_to_dimacs(solver)
-        save_dimacs(dimacs_content, f'{i}_solution')
+        save_dimacs(dimacs_content, f'9by9/{i}_solution')
+
+
+    # cnf_files = os.listdir("16by16_cnf")
+    # for i in cnf_files:
+    #     symbols, clauses = DIMACS_reader_Sixteen(f"16by16_cnf/{i}")
+    #     solver, if_solved = dpll({}, clauses, symbols, 'mom')
+    #     print(if_solved)
+    #     # print(solver)
+    #     dimacs_content = tt_to_dimacs(solver)
+    #     save_dimacs(dimacs_content, f'16by16/{i}_solution')
         
 

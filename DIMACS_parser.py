@@ -52,7 +52,7 @@ def to_DIMACS_Sixteen(state_file,rule_file):
     except:
         pass
     for i in range(len(cnf_list)):
-        with open(f"{16}by{16}_cnf/{16}by{16}_{i+1}.cnf","w") as t:
+        with open(f"{16}by{16}_cnf2/{16}by{16}_{i+1}.cnf","w") as t:
             t.write(f"p cnf {16}{16}{16} {len(cnf_list) + len(exist_rule) + len(repetition_rule)}\n")
             for i in cnf_list[i]:
                 t.write(f"{i} \n")
