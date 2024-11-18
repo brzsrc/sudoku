@@ -149,8 +149,12 @@ def DIMACS_reader(file):
         return symbols, clauses
 
 
-def tt_to_dimacs(truth_table: Dict[str, bool]):
+def tt_to_dimacs(truth_table: Dict[str, bool],if_solved:bool):
     sorted(truth_table)
+    if not truth_table:
+        return ""
+    if not if_solved:
+        return ""
     # Find the highest variable number to determine the number of variables
     num_var = max(int(var) for var in truth_table.keys())
     num_clauses = len(truth_table)
@@ -159,8 +163,6 @@ def tt_to_dimacs(truth_table: Dict[str, bool]):
     for key, value in truth_table.items():
         if value:
             clauses.append(f"{key} 0")
-        else:
-            clauses.append(f"-{key} 0")
 
     # Create the DIMACS CNF header
     header = f"p cnf {num_var} {num_clauses}"
@@ -189,9 +191,9 @@ def save_dimacs(content: str, filename: str):
 # symbols, clauses = DIMACS_reader("4by4.cnf")
 # print(len(symbols),len(clauses))
 # print(len(symbolss),len(clausess))
-# solver, if_solved = dpll({}, clausess, symbolss)
+#solver, if_solved = dpll({}, clausess, symbolss)
 #
 # print(if_solved)
 # print(solver)
-# dimacs_content = tt_to_dimacs(solver)
+#dimacs_content = tt_to_dimacs(solver)
 # save_dimacs(dimacs_content,'test_out')
