@@ -86,15 +86,17 @@ def split(clauses: List[Set], symbols: Set[str], heuristics:str = 'rand'):
     return clauses_fst, clauses_snd
 
 
-def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 'rand', metrics: Metrics = Metrics()):
+def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 'rand', metrics =None):
+    if metrics is None:
+        metrics = Metrics()
     if len(clauses) == 0:
         return solver, True
-    
+
     if len(clauses[0]) == 0:
         return solver, False
-    
+
     #a list of symbols
-    easy_cases = check_easy_cases(clauses, symbols, solver)  
+    easy_cases = check_easy_cases(clauses, symbols, solver)
     easy_cases = easy_cases + check_pure_literal(clauses, symbols, solver)
 
     while(len(easy_cases) != 0):
@@ -104,37 +106,37 @@ def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 
             for clause in clauses.copy():
                 #check if this clause contains the easy_case literal
                 if(easy_case in clause):
-                    if(solver[easy_case] == True):
+                    if(solver[easy_case]):
                         clauses.remove(clause)
                     else:
                         clause.remove(easy_case)
 
-                easy_case_neg = '-'+easy_case        
+                easy_case_neg = '-'+easy_case
                 if(easy_case_neg in clause):
-                    if(solver[easy_case] == False):
+                    if not solver[easy_case]:
                         clauses.remove(clause)
                     else:
-                        clause.remove(easy_case_neg)    
+                        clause.remove(easy_case_neg)
                 if len(clause) == 0:
                     return solver, False
 
-        easy_cases = check_easy_cases(clauses, symbols, solver)    
+        easy_cases = check_easy_cases(clauses, symbols, solver)
 
     #split
-    if(len(symbols) != 0): 
+    if(len(symbols) != 0):
         clauses_fst, clauses_snd = split(clauses, symbols, heuristics)
-    else:    
+    else:
         assert len(clauses) == 0
         clauses_fst = clauses.copy()
         clauses_snd = clauses.copy()
 
-    solver_fst, res_fst = dpll(solver, clauses_fst, symbols, metrics)
+    solver_fst, res_fst = dpll(solver, clauses_fst, symbols, heuristics, metrics)
     if(res_fst == True):
         return solver_fst, True
     else:
-        print("aaaaaa")
-        metrics.increase_backtrack_counter()
-        return dpll(solver, clauses_snd, symbols, metrics)
+        print("Backtracking...")
+        metrics.increment_backtrack_counter()
+        return dpll(solver, clauses_snd, symbols,heuristics, metrics)
     
 
 if __name__ == '__main__':
@@ -163,10 +165,11 @@ if __name__ == '__main__':
         symbols, clauses = DIMACS_reader(f"9by9_cnf/{i}")
         # print(len(symbols), len(clauses))
         metrics = Metrics()
-        metrics.get_start_time()
+        metrics.start_timing()
         solver, if_solved = dpll({}, clauses, symbols, 'jw_os', metrics)
-        metrics.get_end_time()
-        print(f"if_solved: {if_solved}, time elapse: {metrics.get_time_interval()}, # of bt: {metrics.get_backtrack_counter()}")
+        metrics.end_timing()
+        print(f"if_solved: {if_solved}, time elapse: {metrics.get_time_interval()}, "
+              f"# of bt: {metrics.get_backtrack_counter()}")
         # print(solver)
         dimacs_content = tt_to_dimacs(solver, if_solved)
         save_dimacs(dimacs_content, f'9by9/{i}_solution')
