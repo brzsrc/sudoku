@@ -9,10 +9,10 @@ from DPLL import dpll
 
 def entrypoint():
     '''
-    s1: rand
-    s2: jw_os
-    s3: jw_ts
-    s4: mom
+    -S1: rand
+    -S2: jw_os
+    -S3: jw_ts
+    -S4: mom
     '''
     sn_map = {'-S1': 'rand', '-S2': 'jw_os', '-S3': 'jw_ts', '-S4': 'mom'}
 

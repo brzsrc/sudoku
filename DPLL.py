@@ -3,15 +3,49 @@ from heuristics import jw_os, jw_ts, mom
 import os
 from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS,to_DIMACS_Sixteen,DIMACS_reader_Sixteen
 
+def _inverse(literal: str) -> str:
+    return literal.removeprefix('-') if literal.startswith('-') else f'-{literal}'
+
+def is_tautology(clause):
+    return any(_inverse(literal) in clause for literal in clause)
+
+def check_pure_literal(clauses, symbols, solver):
+    easy_cases = []
+    for symbol in symbols.copy():
+        is_contained_pos = False
+        is_contained_neg = False
+
+        for clause in clauses:
+            if (symbol in clause)and not(is_contained_pos):
+                is_contained_pos = True
+            if ('-'+symbol in clause)and not(is_contained_neg):
+                is_contained_neg = True
+        
+        if (is_contained_pos and not(is_contained_neg)):
+            if symbol not in solver:
+                solver[symbol] = True
+                symbols.remove(symbol)
+            easy_cases.append(symbol)
+            
+        if (not(is_contained_pos) and is_contained_neg):    
+            if symbol not in solver:
+                solver[symbol] = False
+                symbols.remove(symbol)
+            easy_cases.append(symbol)
+    return easy_cases
+        
+
 def check_easy_cases(clauses, symbols, solver):
     #a list of symbols
     easy_cases = []
-    for clause in clauses:
+    for clause in clauses.copy():
+        #tautology rule
+        if(is_tautology(clause)):
+            clauses.remove(clause)
+
         #unit clause: {literal}
-        if len(clause) == 1:
+        elif len(clause) == 1:
             literal = clause.copy().pop()    
-            if literal == '866' or literal == '-866':
-                print(f"literal: {literal}")
             if literal[0] == '-':
                 if literal[1:] not in solver:
                     solver[literal[1:]] = False
@@ -59,6 +93,7 @@ def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 
     
     #a list of symbols
     easy_cases = check_easy_cases(clauses, symbols, solver)  
+    easy_cases = easy_cases + check_pure_literal(clauses, symbols, solver)
 
     while(len(easy_cases) != 0):
         #simplify
@@ -102,8 +137,18 @@ def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 
     
 
 if __name__ == '__main__':
-    symbols, clauses = DIMACS_reader_Sixteen(f"16by16_cnf/16by16_1.cnf")
-    print('307' in symbols)
-    solver, if_solved = dpll({}, clauses, symbols)
+    # symbols, clauses = DIMACS_reader_Sixteen(f"16by16_cnf/16by16_1.cnf")
+    # print('307' in symbols)
+    # solver, if_solved = dpll({}, clauses, symbols, 'jw_os')
+
+    cnf_files = os.listdir("9by9_cnf")
+    for i in cnf_files:
+        symbols, clauses = DIMACS_reader(f"9by9_cnf/{i}")
+        print(len(symbols), len(clauses))
+        solver, if_solved = dpll({}, clauses, symbols, 'mom')
+        print(if_solved)
+        # print(solver)
+        dimacs_content = tt_to_dimacs(solver)
+        save_dimacs(dimacs_content, f'{i}_solution')
         
 
