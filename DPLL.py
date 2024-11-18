@@ -1,7 +1,10 @@
+
+import os
+import time
 from typing import List, Dict, Set
 from heuristics import jw_os, jw_ts, mom
-import os
 from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS,to_DIMACS_Sixteen,DIMACS_reader_Sixteen
+from measure import Metrics
 
 def _inverse(literal: str) -> str:
     return literal.removeprefix('-') if literal.startswith('-') else f'-{literal}'
@@ -83,8 +86,7 @@ def split(clauses: List[Set], symbols: Set[str], heuristics:str = 'rand'):
     return clauses_fst, clauses_snd
 
 
-
-def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 'rand'):
+def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 'rand', metrics: Metrics = Metrics()):
     if len(clauses) == 0:
         return solver, True
     
@@ -120,20 +122,19 @@ def dpll(solver: Dict, clauses: List[Set], symbols: Set[str], heuristics: str = 
 
     #split
     if(len(symbols) != 0): 
-        # symbol = symbols.copy().pop()
-        # clauses_pos = clauses + [{symbol}]
-        # clauses_neg = clauses + [{'-'+symbol}]
         clauses_fst, clauses_snd = split(clauses, symbols, heuristics)
     else:    
         assert len(clauses) == 0
         clauses_fst = clauses.copy()
         clauses_snd = clauses.copy()
 
-    solver_fst, res_fst = dpll(solver, clauses_fst, symbols)
+    solver_fst, res_fst = dpll(solver, clauses_fst, symbols, metrics)
     if(res_fst == True):
         return solver_fst, True
     else:
-        return dpll(solver, clauses_snd, symbols)
+        print("aaaaaa")
+        metrics.increase_backtrack_counter()
+        return dpll(solver, clauses_snd, symbols, metrics)
     
 
 if __name__ == '__main__':
@@ -161,11 +162,15 @@ if __name__ == '__main__':
     for i in cnf_files:
         symbols, clauses = DIMACS_reader(f"9by9_cnf/{i}")
         # print(len(symbols), len(clauses))
-        solver, if_solved = dpll({}, clauses, symbols, 'rand')
-        print(if_solved)
+        metrics = Metrics()
+        metrics.get_start_time()
+        solver, if_solved = dpll({}, clauses, symbols, 'jw_os', metrics)
+        metrics.get_end_time()
+        print(f"if_solved: {if_solved}, time elapse: {metrics.get_time_interval()}, # of bt: {metrics.get_backtrack_counter()}")
         # print(solver)
-        dimacs_content = tt_to_dimacs(solver)
+        dimacs_content = tt_to_dimacs(solver, if_solved)
         save_dimacs(dimacs_content, f'9by9/{i}_solution')
+
 
 
     # cnf_files = os.listdir("16by16_cnf")
