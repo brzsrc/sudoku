@@ -2,10 +2,11 @@ import os
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from concurrent.futures import as_completed
 from concurrent.futures.process import ProcessPoolExecutor as PPool
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Set, List, Dict, Optional
+from typing import Set, List, Dict, Optional, cast, Callable
 
 from DIMACS_parser import DIMACS_reader
 
@@ -19,46 +20,39 @@ class Heuristic(ABC):
 
 
 class Rand(Heuristic):
-
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
         return min(clauses[min(clauses)])
 
-class JW_OS(Heuristic):
-    lit_weights = {}
+
+class JWOneSide(Heuristic):
 
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
-        for i, cl in self.clauses.items():
-            cl_weight = 2 ** -len(cl)
+        lit_weights = defaultdict(int)
+        for cl in clauses.values():
             for lit in cl:
-                if lit in self.lit_weights:
-                    self.lit_weights[lit] += cl_weight
-                else:
-                    self.lit_weights[lit] = cl_weight
-        lit_res = max(self.lit_weights, key=lambda x: self.lit_weights.get(x))
-        return lit_res
-    
-class JW_TS(Heuristic):
+                lit_weights[lit] += 2 ** -len(cl)
+
+        return max(lit_weights, key=lit_weights.get)
+
+
+class JWTwoSide(Heuristic):
 
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
-        lit_weights = {}
-        for i, cl in clauses.items():
-            cl_weight = 2 ** -len(cl)
+        lit_weights = defaultdict(int)
+        for cl in clauses.values():
             for lit in cl:
-                if lit in lit_weights:
-                    lit_weights[lit] += cl_weight
-                else:
-                    lit_weights[lit] = cl_weight
-        lit_abs = abs(max(lit_weights, key=lambda x:lit_weights.get(x)+lit_weights.get(-x)))
-        if lit_weights(lit_abs) >= lit_weights(-lit_abs):
-            return lit_abs
-        return -lit_abs
+                lit_weights[lit] += 2 ** -len(cl)
+
+        lit = max(lit_weights, key=lambda x: lit_weights[x] + lit_weights[-x])
+        return max([lit, -lit], key=lit_weights.get)
+
 
 class MOM(Heuristic):
     k = 2
     
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
-        lit_cnt = defaultdict(int)
-        formula = lambda x: (lit_cnt[x] + lit_cnt[-x]) * 2 ** self.k + lit_cnt[x] * lit_cnt[-x]        
+        f = defaultdict(int)
+        formula = cast(Callable, lambda x: (f[x] + f[-x]) * 2 ** self.k + f[x] * f[-x])
         len_dict = {i: len(cl) for i, cl in clauses.items()}
         min_len = min(len_dict.values())
 
@@ -66,9 +60,9 @@ class MOM(Heuristic):
 
         for cl in min_cl:
             for lit in clauses[cl]:
-                lit_cnt[lit] += 1
+                f[lit] += 1
 
-        return max(lit_cnt, key=formula)
+        return max(list(f), key=formula)
 
 
 class SodokuSolver:
@@ -171,26 +165,51 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
         depth_profile=solver.depth_profile,
         backtracks=solver.backtracks
     )
-    verbose and print(f"{filename} {solvable} {result.time_elapsed:6f} | {result.backtracks}")
+    verbose and print(f"{type(heuristic).__name__}{filename} {solvable} {result.time_elapsed:6f} | {result.backtracks}")
     return result
 
 
-def main():
-    # directory = "4by4_cnf"
-    directory = "16by16_cnf"
-    cnf_files = os.listdir(directory)
-    files = [f'{directory}/{file}' for file in sorted(cnf_files, key=lambda x: int(x[5:-4]))]
+def _get_files(directory: str= "4by4_cnf"):
+    return [f'{directory}/{file}' for file in sorted(os.listdir(directory), key=lambda x: int(x[5:-4]))]
 
+
+def main():
+    files = _get_files("9by9_cnf")
+    heuristics = [Rand, MOM]  # JWOneSide, JWTwoSide,
     cpu_count = os.cpu_count()
     print(f"running experiment with {cpu_count} cores")
+    map_ = lambda f, *iters: [f(*args) for args in zip(*iters)]
 
-    t = time.perf_counter()
+    # t = time.perf_counter()
     with PPool(max_workers=cpu_count) as pool:
-        results = list(pool.map(run_experiment, files))
+        result_futures = {
+            h: (map_, pool.map)[cpu_count > 0](run_experiment, files, [h()] * len(files))
+            for h in heuristics
+        }
+        results = {k: list(v) for k, v in result_futures.items()}
 
-    avg = sum(res.time_elapsed for res in results) / len(results)
-    print(f"time elapsed per result: {avg:3f}")
-    print(f"time for the entire sim {time.perf_counter() - t}")
+    import matplotlib.pyplot as plt
+
+    for h, res_list in results.items():
+        h_name = h.__name__
+        res_list: List[ExperimentResult]
+        elapsed = [r.time_elapsed for r in res_list]
+        backtracks = [r.backtracks for r in res_list]
+        n_steps = [len(r.depth_profile) for r in res_list]
+
+        plt.bar(list(range(len(elapsed))), elapsed, label='time elapsed')
+        plt.title(f"{h_name}: elapsed")
+        plt.show()
+
+        plt.bar(list(range(len(backtracks))), backtracks, label='num of backtracks')
+        plt.title(f"{h_name}: backtracks")
+        plt.show()
+
+
+
+    # avg = sum(res.time_elapsed for res in results) / len(results)
+    # print(f"time elapsed per result: {avg:3f}")
+    # print(f"time for the entire sim {time.perf_counter() - t}")
 
 
 if __name__ == '__main__':
