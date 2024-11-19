@@ -2,14 +2,12 @@ import os
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from concurrent.futures import as_completed
-from copy import deepcopy
-from typing import Set, List, Dict
-
 from concurrent.futures.process import ProcessPoolExecutor as PPool
+from copy import deepcopy
+from dataclasses import dataclass
+from typing import Set, List, Dict, Optional
 
 from DIMACS_parser import DIMACS_reader
-
 
 Literal = int
 
@@ -28,6 +26,9 @@ class Rand(Heuristic):
 
 class SodokuSolver:
     clauses: Dict[int, List[Literal]]
+    solution: Dict[Literal, bool]
+    backtracks: int
+    depth_profile: List[int]
 
     def __init__(self, filename: str, heuristic: Heuristic):
         all_lit_pos, clauses = DIMACS_reader(filename)
@@ -38,6 +39,8 @@ class SodokuSolver:
         self.solution = {}
         self.heuristic = heuristic
         self._populate_lit_where()
+        self.backtracks = 0
+        self.depth_profile = []
 
     def _populate_lit_where(self):
         for i, cl in self.clauses.items():
@@ -61,7 +64,7 @@ class SodokuSolver:
         self.solution[abs(literal)] = literal > 0
         return True
 
-    def simplify(self):
+    def simplify(self) -> bool:
         change = True
         while change:
             change = False
@@ -76,7 +79,8 @@ class SodokuSolver:
                     break
         return True
 
-    def solve(self, depth: int = 0):
+    def solve(self, depth: int = 0) -> bool:
+        self.depth_profile.append(depth)
         status = self.simplify()
 
         if not status:
@@ -85,48 +89,61 @@ class SodokuSolver:
         if not self.clauses:
             return True
 
-        lit_ = self.heuristic.choose(self.clauses)
+        lit = self.heuristic.choose(self.clauses)
         sol = self.solution.copy()
         clauses = deepcopy(self.clauses)
 
-        for lit in lit_, -lit_:
-            try:
-                assert self.solve_literal(lit)
-                assert self.solve(depth + 1)
-                return True
+        if self.solve_literal(lit) and self.solve(depth + 1):
+            return True
 
-            except AssertionError:
-                self.solution = sol
-                self.clauses = clauses
-
-        return False
+        self.solution = sol
+        self.clauses = clauses
+        self.backtracks += 1
+        return self.solve_literal(-lit) and self.solve(depth + 1)
 
 
-def _log(*args, **kwargs):
-    0 and print(*args, **kwargs)
+@dataclass
+class ExperimentResult:
+    filename: str
+    solvable: bool
+    time_elapsed: float
+    literals: Set[int]
+    depth_profile: List[int]
+    backtracks: int
 
 
-def _solve_file(filename: str) -> Set[Literal]:
-    solver = SodokuSolver(filename, Rand())
-    assert solver.solve()
-    print(f"solved {filename}")
-    return {literal for literal, truth in solver.solution.items() if truth}
+def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = True):
+    solver = SodokuSolver(filename, heuristic or Rand())
+    t = time.perf_counter()
+    solvable = solver.solve()
+    result = ExperimentResult(
+        filename=filename,
+        solvable=solvable,
+        time_elapsed=time.perf_counter() - t,
+        literals={literal for literal, truth in solver.solution.items() if truth},
+        depth_profile=solver.depth_profile,
+        backtracks=solver.backtracks
+    )
+    verbose and print(f"{filename} {solvable} {result.time_elapsed:6f} | {result.backtracks}")
+    return result
 
 
 def main():
     # directory = "4by4_cnf"
-    directory = "16by16.cnf"
+    directory = "16by16_cnf"
     cnf_files = os.listdir(directory)
     files = [f'{directory}/{file}' for file in sorted(cnf_files, key=lambda x: int(x[5:-4]))]
 
-    with PPool() as pool:
-        pool.map(_solve_file, files)
-    # check_file('9by9_cnf/9by9_3.cnf')
-    # solver = SodokuSolver("9by9_cnf/9by9_3.cnf", Rand())
-    # print(solver.solve())
-    # print(solver.solution)
-    # with PPool() as pool:
-    #     futs = pool.map(check_file, files)
+    cpu_count = os.cpu_count()
+    print(f"running experiment with {cpu_count} cores")
+
+    t = time.perf_counter()
+    with PPool(max_workers=cpu_count) as pool:
+        results = list(pool.map(run_experiment, files))
+
+    avg = sum(res.time_elapsed for res in results) / len(results)
+    print(f"time elapsed per result: {avg:3f}")
+    print(f"time for the entire sim {time.perf_counter() - t}")
 
 
 if __name__ == '__main__':
