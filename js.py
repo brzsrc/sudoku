@@ -25,6 +25,53 @@ class Rand(Heuristic):
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
         return min(clauses[min(clauses)])
 
+class JW_OS(Heuristic):
+    lit_weights = {}
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        for i, cl in self.clauses.items():
+            cl_weight = 2 ** -len(cl)
+            for lit in cl:
+                if lit in self.lit_weights:
+                    self.lit_weights[lit] += cl_weight
+                else:
+                    self.lit_weights[lit] = cl_weight
+        lit_res = max(self.lit_weights, key=lambda x: self.lit_weights.get(x))
+        return lit_res
+    
+class JW_TS(Heuristic):
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        lit_weights = {}
+        for i, cl in clauses.items():
+            cl_weight = 2 ** -len(cl)
+            for lit in cl:
+                if lit in lit_weights:
+                    lit_weights[lit] += cl_weight
+                else:
+                    lit_weights[lit] = cl_weight
+        lit_abs = abs(max(lit_weights, key=lambda x:lit_weights.get(x)+lit_weights.get(-x)))
+        if lit_weights(lit_abs) >= lit_weights(-lit_abs):
+            return lit_abs
+        return -lit_abs
+
+class MOM(Heuristic):
+    k = 2
+    
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        lit_cnt = defaultdict(int)
+        formula = lambda x: (lit_cnt[x] + lit_cnt[-x]) * 2 ** self.k + lit_cnt[x] * lit_cnt[-x]        
+        len_dict = {i: len(cl) for i, cl in clauses.items()}
+        min_len = min(len_dict.values())
+
+        min_cl = [i for i, len_ in len_dict.items() if len_ == min_len]
+
+        for cl in min_cl:
+            for lit in clauses[cl]:
+                lit_cnt[lit] += 1
+
+        return max(lit_cnt, key=formula)
+
 
 class SodokuSolver:
     clauses: Dict[int, List[Literal]]
