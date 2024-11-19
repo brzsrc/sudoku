@@ -1,6 +1,9 @@
 import os
 import time
+from abc import ABC, abstractmethod
+from collections import defaultdict
 from concurrent.futures import as_completed
+from copy import deepcopy
 from typing import Set, List, Dict
 
 from concurrent.futures.process import ProcessPoolExecutor as PPool
@@ -8,121 +11,122 @@ from concurrent.futures.process import ProcessPoolExecutor as PPool
 from DIMACS_parser import DIMACS_reader
 
 
-def _batches(li: List, n: int):
-    return [li[i:i+n] for i in range(0, len(li), n)]
+Literal = int
 
 
-def _neg(literal: str) -> str:
-    return literal[1:] if literal.startswith('-') else '-' + literal
+class Heuristic(ABC):
+
+    @abstractmethod
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal: ...
 
 
-def _is_neg(literal: str) -> bool:
-    return literal.startswith('-')
+class Rand(Heuristic):
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        return min(clauses[min(clauses)])
 
 
-def _as_pos(literal: str, value: bool):
-    return (literal[1:], not value) if _is_neg(literal) else (literal, value)
+class SodokuSolver:
+    clauses: Dict[int, List[Literal]]
 
+    def __init__(self, filename: str, heuristic: Heuristic):
+        all_lit_pos, clauses = DIMACS_reader(filename)
+        clauses = [{int(lit) for lit in cl} for cl in clauses]
 
-def _copy_clauses(clauses: List[Set[str]]) -> List[Set[str]]:
-    return [clause.copy() for clause in clauses]
+        self.clauses = {i: [int(lit) for lit in cl] for i, cl in enumerate(clauses)}
+        self.lit_where = defaultdict(list)
+        self.solution = {}
+        self.heuristic = heuristic
+        self._populate_lit_where()
+
+    def _populate_lit_where(self):
+        for i, cl in self.clauses.items():
+            for lit in cl:
+                self.lit_where[lit].append(i)
+
+    def solve_literal(self, literal: Literal) -> bool:
+        for clause_idx in self.lit_where[literal]:
+            if clause_idx not in self.clauses:
+                continue
+            del self.clauses[clause_idx]
+
+        for clause_idx in self.lit_where[-literal]:
+            if clause_idx not in self.clauses:
+                continue
+
+            self.clauses[clause_idx].remove(-literal)
+            if not self.clauses[clause_idx]:
+                return False
+
+        self.solution[abs(literal)] = literal > 0
+        return True
+
+    def simplify(self):
+        change = True
+        while change:
+            change = False
+            for cl_idx, cl in self.clauses.items():
+                if len(cl) == 1:
+                    lit = cl[0]
+                    del self.clauses[cl_idx]
+                    status = self.solve_literal(lit)
+                    if not status:
+                        return False
+                    change = True
+                    break
+        return True
+
+    def solve(self, depth: int = 0):
+        status = self.simplify()
+
+        if not status:
+            return False
+
+        if not self.clauses:
+            return True
+
+        lit_ = self.heuristic.choose(self.clauses)
+        sol = self.solution.copy()
+        clauses = deepcopy(self.clauses)
+
+        for lit in lit_, -lit_:
+            try:
+                assert self.solve_literal(lit)
+                assert self.solve(depth + 1)
+                return True
+
+            except AssertionError:
+                self.solution = sol
+                self.clauses = clauses
+
+        return False
 
 
 def _log(*args, **kwargs):
     0 and print(*args, **kwargs)
 
 
-def _show_soduku(literals: List[str]):
-    sudoku = [list('#' * 9) for _ in range(9)]
-    for lit in literals:
-        sudoku[int(lit[0]) - 1][int(lit[1]) - 1] = lit[2]
-    print('\n'.join(' '.join(row) for row in sudoku))
-
-
-def f_sol(clauses: List[Set[str]], cur_sol: Dict[str, bool], depth: int = 0):
-    indent = ' ' * depth
-
-    while True:
-        all_literals = {lit for cl in clauses for lit in cl}
-        unit_clauses = {i for i, cl in enumerate(clauses) if len(cl) == 1}
-        pure_literals = {lit for lit in all_literals if _neg(lit) not in all_literals}
-        tauts = {i for i, cl in enumerate(clauses) if any(_neg(lit) in cl for lit in cl)}
-
-        if not (tauts or unit_clauses or pure_literals):
-            break
-        _log(f"{indent}crunching cl: {len(clauses)} | sol: {len(cur_sol)} | {len(unit_clauses)} ...")
-        # print(f"units: {len(unit_clauses)}, pures: {len(pure_literals)}, cl: {len(clauses)}, taut: {len(tauts)}")
-
-        true_lit = pure_literals.copy()
-        for i in unit_clauses:
-            true_lit.update(clauses[i])
-
-        false_lit = {_neg(lit) for lit in true_lit}
-
-        _log(f"{indent} true_lit={len(true_lit)}")
-        cur_sol.update(dict(_as_pos(lit, True) for lit in true_lit))
-
-        for i, idx in enumerate(sorted(tauts | unit_clauses)):
-            del clauses[idx - i]
-
-        to_rm = []
-        for i, cl in enumerate(clauses):
-            tr = cl.intersection(true_lit)
-            if tr:
-                to_rm.append(i)
-            else:
-                cl.difference_update(false_lit)
-                if not cl:
-                    _log(f"{indent}nope!")
-                    return {}, False
-
-        for i, idx in enumerate(to_rm):
-            del clauses[idx - i]
-
-        if not clauses:
-            return cur_sol, True
-
-    _log(f"{indent}hard...")
-    all_literals = {lit for cl in clauses for lit in cl}
-    assert not any(map(cur_sol.__contains__, all_literals)), "literal exists which has value already determined"
-
-    if depth and 0:
-        with PPool() as pool:
-            futs = [
-                pool.submit(f_sol, [{lit_}] + _copy_clauses(clauses), cur_sol.copy(), depth + 1)
-                for lit in all_literals
-                for lit_ in (lit, _neg(lit))
-            ]
-            for fut in as_completed(futs):
-                sol, status = fut.result()
-                if status:
-                    return sol, status
-
-    else:
-        for f in lambda x: x, _neg:
-            for i, lit in enumerate(all_literals):
-                sol, status = f_sol([{f(lit)}] + _copy_clauses(clauses), cur_sol.copy(), depth + 1)
-                if status:
-                    return sol, status
-
-    return {}, False
-
-
-def check_file(filename: str):
-    _, clauses = DIMACS_reader(filename)
-    t = time.perf_counter()
-    sol, status = f_sol(clauses, {})
-    print(f"{filename}: {status}, {round(time.perf_counter() - t, 3)}")
+def _solve_file(filename: str) -> Set[Literal]:
+    solver = SodokuSolver(filename, Rand())
+    assert solver.solve()
+    print(f"solved {filename}")
+    return {literal for literal, truth in solver.solution.items() if truth}
 
 
 def main():
-    directory = "9by9_cnf"
     # directory = "4by4_cnf"
+    directory = "16by16.cnf"
     cnf_files = os.listdir(directory)
     files = [f'{directory}/{file}' for file in sorted(cnf_files, key=lambda x: int(x[5:-4]))]
 
     with PPool() as pool:
-        futs = pool.map(check_file, files)
+        pool.map(_solve_file, files)
+    # check_file('9by9_cnf/9by9_3.cnf')
+    # solver = SodokuSolver("9by9_cnf/9by9_3.cnf", Rand())
+    # print(solver.solve())
+    # print(solver.solution)
+    # with PPool() as pool:
+    #     futs = pool.map(check_file, files)
 
 
 if __name__ == '__main__':
