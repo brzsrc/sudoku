@@ -29,7 +29,7 @@ def _copy_clauses(clauses: List[Set[str]]) -> List[Set[str]]:
 
 
 def _log(*args, **kwargs):
-    print(*args, **kwargs)
+    0 and print(*args, **kwargs)
 
 
 def _show_soduku(literals: List[str]):
@@ -39,7 +39,7 @@ def _show_soduku(literals: List[str]):
     print('\n'.join(' '.join(row) for row in sudoku))
 
 
-def f_sol(clauses: List[Set[str]], cur_sol: Dict[str, bool], pool, depth: int = 0):
+def f_sol(clauses: List[Set[str]], cur_sol: Dict[str, bool], depth: int = 0):
     indent = ' ' * depth
 
     while True:
@@ -86,10 +86,10 @@ def f_sol(clauses: List[Set[str]], cur_sol: Dict[str, bool], pool, depth: int = 
     all_literals = {lit for cl in clauses for lit in cl}
     assert not any(map(cur_sol.__contains__, all_literals)), "literal exists which has value already determined"
 
-    if not depth:
+    if depth and 0:
         with PPool() as pool:
             futs = [
-                pool.submit(f_sol, [{lit_}] + _copy_clauses(clauses), cur_sol.copy(), None, depth + 1)
+                pool.submit(f_sol, [{lit_}] + _copy_clauses(clauses), cur_sol.copy(), depth + 1)
                 for lit in all_literals
                 for lit_ in (lit, _neg(lit))
             ]
@@ -98,17 +98,32 @@ def f_sol(clauses: List[Set[str]], cur_sol: Dict[str, bool], pool, depth: int = 
                 if status:
                     return sol, status
 
+    else:
+        for f in lambda x: x, _neg:
+            for i, lit in enumerate(all_literals):
+                sol, status = f_sol([{f(lit)}] + _copy_clauses(clauses), cur_sol.copy(), depth + 1)
+                if status:
+                    return sol, status
+
     return {}, False
 
 
+def check_file(filename: str):
+    _, clauses = DIMACS_reader(filename)
+    t = time.perf_counter()
+    sol, status = f_sol(clauses, {})
+    print(f"{filename}: {status}, {round(time.perf_counter() - t, 3)}")
+
+
 def main():
-    cnf_files = os.listdir("9by9_cnf")
-    for filename in sorted(cnf_files, key=lambda x: int(x[5:-4])):
-        print(filename)
-        symbols, clauses = DIMACS_reader(f"9by9_cnf/{filename}")
-        t = time.perf_counter()
-        sol, status = f_sol(clauses, {}, None)
-        print(f"{filename}: {status}, {round(time.perf_counter() - t, 3)}")
+    directory = "9by9_cnf"
+    # directory = "4by4_cnf"
+    cnf_files = os.listdir(directory)
+    files = [f'{directory}/{file}' for file in sorted(cnf_files, key=lambda x: int(x[5:-4]))]
+
+    with PPool() as pool:
+        futs = pool.map(check_file, files)
+
 
 if __name__ == '__main__':
     main()
