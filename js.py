@@ -322,8 +322,8 @@ def find_hard_files():
     #     print(f"{h_name}: {avg([r.backtracks for r in res_list])}")
 
 if __name__ == '__main__':
-    find_hard_files()
-    # main()
+    # find_hard_files()
+    main()
 
 
 
