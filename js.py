@@ -7,6 +7,7 @@ from collections import defaultdict, Counter
 from concurrent.futures.process import ProcessPoolExecutor as PPool
 from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Set, List, Dict, Optional, cast, Callable
 
 import pandas as pd
@@ -249,7 +250,10 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     else:
         print(f"{type(heuristic).__name__} | {filename[5:-4]}")
 
-    with open(f"16x16_res/{filename}", 'wb') as f:
+    out_file = Path(f"16x16_res/{filename}")
+    # os.makedirs(out_file.parent, exist_ok=True)
+    Path(out_file).touch(exist_ok=True)
+    with open(out_file, 'wb') as f:
         pickle.dump(res, f)
     return res
 
@@ -259,13 +263,13 @@ def _get_files(directory: str= "4by4_cnf"):
 
 
 def main():
-    cpu_count = 8
+    cpu_count = 40
     map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
     # avg = lambda x: sum(x) / len(x)
 
     with PPool(max_workers=cpu_count) as pool:
         for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
-            files = _get_files(directory)
+            files = _get_files(directory)[:10]
 
             for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
                 h_name = h.__name__
