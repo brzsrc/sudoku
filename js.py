@@ -269,7 +269,7 @@ def main():
 
     with PPool(max_workers=cpu_count) as pool:
         for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
-            files = _get_files(directory)[:10]
+            files = _get_files(directory)
 
             for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
                 h_name = h.__name__
