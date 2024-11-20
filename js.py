@@ -1,15 +1,21 @@
 import os
 import time
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import defaultdict, Counter
 from concurrent.futures.process import ProcessPoolExecutor as PPool
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Set, List, Dict, Optional, cast, Callable
 
+import pandas as pd
+
 from DIMACS_parser import DIMACS_reader, DIMACS_reader_Sixteen
 
 Literal = int
+
+
+class Unsolvable(Exception):
+    pass
 
 
 class Heuristic(ABC):
@@ -46,6 +52,36 @@ class JWTwoSide(Heuristic):
         return max([lit, -lit], key=lit_weights.get)
 
 
+class JWTwoSideMin(Heuristic):
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        lit_weights = defaultdict(int)
+        for cl in clauses.values():
+            for lit in cl:
+                lit_weights[lit] += 2 ** -len(cl)
+
+        lit = min(lit_weights, key=lambda x: lit_weights[x] + lit_weights[-x])
+        return min([lit, -lit], key=lit_weights.get)
+
+
+class DLCS(Heuristic):
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        occ = Counter(lit for lit_l in clauses.values() for lit in lit_l)
+        pos_lit = set(map(abs, occ))
+        max_pos_lit = max(pos_lit, key=lambda lit: occ[lit] + occ[-lit])
+        return (-max_pos_lit, max_pos_lit)[occ[max_pos_lit] > occ[-max_pos_lit]]
+
+
+class DLIS(Heuristic):
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        occ = Counter(lit for lit_l in clauses.values() for lit in lit_l)
+        pos_lit = set(map(abs, occ))
+        max_pos_lit = max(pos_lit, key=lambda lit: max(occ[lit], occ[-lit]))
+        return (-max_pos_lit, max_pos_lit)[occ[max_pos_lit] > occ[-max_pos_lit]]
+
+
 class MOM(Heuristic):
     k = 2
     
@@ -68,29 +104,33 @@ class SodokuSolver:
     clauses: Dict[int, List[Literal]]
     solution: Dict[Literal, bool]
     backtracks: int
-    depth_profile: List[int]
+    max_depth: int
+    solved_literals: int
 
     def __init__(self, filename: str, heuristic: Heuristic):
-        if '16by16' in filename:
-            all_lit_pos, clauses = DIMACS_reader_Sixteen(filename)
-        else:
-            all_lit_pos, clauses = DIMACS_reader(filename)
+        all_lit_pos, clauses = (DIMACS_reader, DIMACS_reader_Sixteen)['16by16' in filename](filename)
         clauses = [{int(lit) for lit in cl} for cl in clauses]
 
-        self.clauses = {i: [int(lit) for lit in cl] for i, cl in enumerate(clauses)}
+        self.clauses = {i: [lit for lit in cl] for i, cl in enumerate(clauses)}
         self.lit_where = defaultdict(list)
         self.solution = {}
         self.heuristic = heuristic
         self._populate_lit_where()
         self.backtracks = 0
-        self.depth_profile = []
+        self.max_depth = 0
+        self.pure_literals = 0
+        self.solved_literals = 0
 
     def _populate_lit_where(self):
         for i, cl in self.clauses.items():
             for lit in cl:
                 self.lit_where[lit].append(i)
 
-    def solve_literal(self, literal: Literal) -> bool:
+    def solve_literal(self, literal: Literal) -> None:
+        if -literal in self.solution:
+            raise Unsolvable()
+        assert literal not in self.solution
+
         for clause_idx in self.lit_where[literal]:
             if clause_idx not in self.clauses:
                 continue
@@ -102,47 +142,57 @@ class SodokuSolver:
 
             self.clauses[clause_idx].remove(-literal)
             if not self.clauses[clause_idx]:
-                return False
+                raise Unsolvable()
 
         self.solution[abs(literal)] = literal > 0
-        return True
+        self.solved_literals += 1
 
-    def simplify(self) -> bool:
+    def simplify(self) -> None:
         change = True
         while change:
             change = False
             for cl_idx, cl in self.clauses.items():
                 if len(cl) == 1:
-                    lit = cl[0]
                     del self.clauses[cl_idx]
-                    status = self.solve_literal(lit)
-                    if not status:
-                        return False
+                    self.solve_literal(cl[0])
                     change = True
                     break
-        return True
 
-    def solve(self, depth: int = 0) -> bool:
-        self.depth_profile.append(depth)
-        status = self.simplify()
+    def remove_pure_literals(self):
+        for literal in self.lit_where:
+            if abs(literal) in self.solution:
+                continue
+            if not any(map(self.clauses.__contains__, self.lit_where[-literal])):
+                self.solve_literal(literal)
+                self.pure_literals += 1
 
-        if not status:
-            return False
+    def solve(self, depth: int = 0):
+        try:
+            self.remove_pure_literals()
+        except Unsolvable as e:
+            raise Unsolvable(f"Unsolvable in `remove_pure_literals` at depth {depth}") from e
+
+        self.max_depth = max(self.max_depth, depth)
+        self.simplify()
 
         if not self.clauses:
-            return True
+            return self.solution
 
         lit = self.heuristic.choose(self.clauses)
         sol = self.solution.copy()
         clauses = deepcopy(self.clauses)
 
-        if self.solve_literal(lit) and self.solve(depth + 1):
-            return True
+        try:
+            self.solve_literal(lit)
+            return self.solve(depth + 1)
 
-        self.solution = sol
-        self.clauses = clauses
-        self.backtracks += 1
-        return self.solve_literal(-lit) and self.solve(depth + 1)
+        except Unsolvable:
+            self.solution = sol
+            self.clauses = clauses
+            self.backtracks += 1
+            self.solve_literal(-lit)
+
+            return self.solve(depth + 1)
 
 
 @dataclass
@@ -151,24 +201,47 @@ class ExperimentResult:
     solvable: bool
     time_elapsed: float
     literals: Set[int]
-    depth_profile: List[int]
+    max_depth: int
     backtracks: int
+    pure_literals: int
+    solved_literals: int
 
 
-def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = True):
+def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = False):
     solver = SodokuSolver(filename, heuristic or Rand())
     t = time.perf_counter()
-    solvable = solver.solve()
-    result = ExperimentResult(
+
+    # try:
+    solution = solver.solve()
+    solvable = True
+
+    # except Unsolvable:
+    #     solvable = False
+    #     solution = {}
+
+    res = ExperimentResult(
         filename=filename,
         solvable=solvable,
         time_elapsed=time.perf_counter() - t,
-        literals={literal for literal, truth in solver.solution.items() if truth},
-        depth_profile=solver.depth_profile,
-        backtracks=solver.backtracks
+        literals={literal for literal, truth in solution.items() if truth},
+        max_depth=solver.max_depth,
+        backtracks=solver.backtracks,
+        pure_literals=solver.pure_literals,
+        solved_literals=solver.solved_literals,
     )
-    verbose and print(f"{type(heuristic).__name__}{filename} {solvable} {result.time_elapsed:6f} | {result.backtracks}")
-    return result
+    if verbose:
+        print(
+            f"{type(heuristic).__name__}"
+            f" | {filename=}"
+            f" | {solvable=}"
+            f" | {res.time_elapsed=:6f}"
+            f" | {res.backtracks=}"
+            f" | {res.pure_literals=}"
+            f" | {res.max_depth=}"
+            )
+    else:
+        print(f"{type(heuristic).__name__} | {filename[5:-4]}")
+    return res
 
 
 def _get_files(directory: str= "4by4_cnf"):
@@ -176,56 +249,47 @@ def _get_files(directory: str= "4by4_cnf"):
 
 
 def main():
-    files = _get_files("16by16_cnf")
-    heuristics = [Rand, MOM, JWOneSide, JWTwoSide]
-    cpu_count = os.cpu_count()
-    print(f"running experiment with {cpu_count} cores")
-    map_ = lambda f, *iters: [f(*args) for args in zip(*iters)]
+    cpu_count = 8
+    map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
+    # avg = lambda x: sum(x) / len(x)
 
-    # t = time.perf_counter()
     with PPool(max_workers=cpu_count) as pool:
-        result_futures = {
-            h: (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
-            for h in heuristics
-        }
-        results = {k: list(v) for k, v in result_futures.items()}
+        for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+            files = _get_files(directory)
 
-    import matplotlib.pyplot as plt
-
-    for h, res_list in results.items():
-        h_name = h.__name__
-        res_list: List[ExperimentResult]
-        elapsed = [r.time_elapsed for r in res_list]
-        backtracks = [r.backtracks for r in res_list]
-        n_steps = [len(r.depth_profile) for r in res_list]
-        filename = [r.filename for r in res_list]
-
-        filepath = f"./outputs/16x16csv/{h_name}_16x16.csv"
-        with open(filepath, 'w') as file:
-            file.write("filename, time_elapsed, # of bcktrack, n_steps: \n")
-            for i in range(len(elapsed)):
-                for res in [filename, elapsed, backtracks]:
-                    file.write(f"{res[i]}, ")
-                for res in [n_steps]:
-                    file.write(f"{res[i]}")
-                file.write(f"\n")
-            
-            
-
-        # plt.bar(list(range(len(elapsed))), elapsed, label='time elapsed')
-        # plt.title(f"{h_name}: elapsed")
-        # plt.show()
-
-        # plt.bar(list(range(len(backtracks))), backtracks, label='num of backtracks')
-        # plt.title(f"{h_name}: backtracks")
-        # plt.show()
+            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+                h_name = h.__name__
+                results: List[ExperimentResult] = list(
+                    (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
+                )
+                results_df = pd.DataFrame({
+                    "filename": [res.filename for res in results],
+                    "solvable": [res.solvable for res in results],
+                    "time_elapsed": [res.time_elapsed for res in results],
+                    # "literals": [list(res.literals) for res in results],
+                    "max_depth": [res.max_depth for res in results],
+                    "backtracks": [res.backtracks for res in results],
+                    # "pure_literals": [res.pure_literals for res in results],
+                    "solved_literals": [res.solved_literals for res in results],
+                    "heuristic_used": [h_name] * len(results)
+                })
+                results_df.to_csv(f"results/{directory}_{h_name}.csv")
 
 
 
-    # avg = sum(res.time_elapsed for res in results) / len(results)
-    # print(f"time elapsed per result: {avg:3f}")
-    # print(f"time for the entire sim {time.perf_counter() - t}")
-
+    # files = _get_files("9by9_cnf")
+    # heuristics = [DLCS, DLIS, Rand]  # Rand, MOM, JWOneSide, JWTwoSide, JWTwoSideMin,
+    #
+    # t = time.perf_counter()
+        # result_futures = {
+        #     h: (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
+        #     for h in heuristics
+        # }
+        # results = {k: list(v) for k, v in result_futures.items()}
+    #
+    # for h, res_list in results.items():
+    #     res_list: List[ExperimentResult]
+    #     print(f"{h_name}: {avg([r.backtracks for r in res_list])}")
 
 if __name__ == '__main__':
     main()
