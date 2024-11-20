@@ -1,6 +1,7 @@
 from typing import Dict, List, Set, Tuple
 import numpy as np
 import os
+from pathlib import Path
 # from DPLL import dpll
 
 def to_DIMACS_Sixteen(state_file,rule_file):
@@ -177,7 +178,12 @@ def save_dimacs(content: str, filename: str):
     """
     Save a string content into a DIMACS file.
     """
+
+    filename = filename.removesuffix(".cnf")
     filepath = f"./outputs/{filename}.output"
+    filepath_parent = Path(filepath).resolve().parent
+    if not os.path.exists(f"{filepath_parent}"):
+        os.makedirs(f"{filepath_parent}")
     with open(filepath, 'w') as file:
         file.write(content)
 
