@@ -1,4 +1,3 @@
-import json
 import os
 import pickle
 import time
@@ -250,8 +249,8 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     else:
         print(f"{type(heuristic).__name__} | {filename[5:-4]}")
 
-    out_file = Path(f"16x16_res/{filename}")
-    # os.makedirs(out_file.parent, exist_ok=True)
+    out_file = (Path(__file__).parent / f"16x16_res/{filename}").with_suffix('.pkl')
+    os.makedirs(out_file.parent, exist_ok=True)
     Path(out_file).touch(exist_ok=True)
     with open(out_file, 'wb') as f:
         pickle.dump(res, f)
