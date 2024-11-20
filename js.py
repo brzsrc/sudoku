@@ -2,7 +2,6 @@ import os
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from concurrent.futures import as_completed
 from concurrent.futures.process import ProcessPoolExecutor as PPool
 from copy import deepcopy
 from dataclasses import dataclass
@@ -183,7 +182,7 @@ def main():
     # t = time.perf_counter()
     with PPool(max_workers=cpu_count) as pool:
         result_futures = {
-            h: (map_, pool.map)[cpu_count > 0](run_experiment, files, [h()] * len(files))
+            h: (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
             for h in heuristics
         }
         results = {k: list(v) for k, v in result_futures.items()}
