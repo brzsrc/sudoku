@@ -106,6 +106,7 @@ class SodokuSolver:
     backtracks: int
     max_depth: int
     solved_literals: int
+    n_steps: int
 
     def __init__(self, filename: str, heuristic: Heuristic):
         all_lit_pos, clauses = (DIMACS_reader, DIMACS_reader_Sixteen)['16by16' in filename](filename)
@@ -120,6 +121,7 @@ class SodokuSolver:
         self.max_depth = 0
         self.pure_literals = 0
         self.solved_literals = 0
+        self.n_steps = 0
 
     def _populate_lit_where(self):
         for i, cl in self.clauses.items():
@@ -167,6 +169,7 @@ class SodokuSolver:
                 self.pure_literals += 1
 
     def solve(self, depth: int = 0):
+        self.n_steps += 1
         try:
             self.remove_pure_literals()
         except Unsolvable as e:
@@ -205,6 +208,7 @@ class ExperimentResult:
     backtracks: int
     pure_literals: int
     solved_literals: int
+    n_steps: int
 
 
 def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = False):
@@ -228,6 +232,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
         backtracks=solver.backtracks,
         pure_literals=solver.pure_literals,
         solved_literals=solver.solved_literals,
+        n_steps=solver.n_steps,
     )
     if verbose:
         print(
@@ -271,6 +276,7 @@ def main():
                     "backtracks": [res.backtracks for res in results],
                     # "pure_literals": [res.pure_literals for res in results],
                     "solved_literals": [res.solved_literals for res in results],
+                    "n_steps": [res.n_steps for res in results],
                     "heuristic_used": [h_name] * len(results)
                 })
                 results_df.to_csv(f"results/{directory}_{h_name}.csv")
