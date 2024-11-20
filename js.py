@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 import time
@@ -5,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
 from concurrent.futures.process import ProcessPoolExecutor as PPool
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Set, List, Dict, Optional, cast, Callable
 
@@ -205,7 +206,7 @@ class ExperimentResult:
     filename: str
     solvable: bool
     time_elapsed: float
-    literals: Set[int]
+    # literals: str
     max_depth: int
     backtracks: int
     pure_literals: int
@@ -215,10 +216,7 @@ class ExperimentResult:
 
 def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = False):
     h_name = type(heuristic).__name__
-    out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{filename}").with_suffix('.pkl')
-    if out_file.exists():
-        with open(out_file, 'rb') as f:
-            return pickle.load(f)
+    out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{filename}").with_suffix('.json')
     os.makedirs(out_file.parent, exist_ok=True)
 
     solver = SodokuSolver(filename, heuristic or Rand())
@@ -236,7 +234,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
         filename=filename,
         solvable=solvable,
         time_elapsed=time.perf_counter() - t,
-        literals={literal for literal, truth in solution.items() if truth},
+        # literals='|'.join(map(str, {literal for literal, truth in solution.items() if truth})),
         max_depth=solver.max_depth,
         backtracks=solver.backtracks,
         pure_literals=solver.pure_literals,
@@ -259,7 +257,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
 
     Path(out_file).touch(exist_ok=True)
     with open(out_file, 'wb') as f:
-        pickle.dump(res, f)
+        json.dump(asdict(res), f)
     return res
 
 
@@ -343,7 +341,7 @@ def read_easy_files():
 if __name__ == '__main__':
     find_hard_files()
     read_easy_files()
-    # main()
+    main()
 
 
 
