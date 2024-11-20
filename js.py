@@ -1,4 +1,6 @@
+import json
 import os
+import pickle
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
@@ -246,6 +248,9 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
             )
     else:
         print(f"{type(heuristic).__name__} | {filename[5:-4]}")
+
+    with open(f"16x16_res/{filename}", 'wb') as f:
+        pickle.dump(res, f)
     return res
 
 
