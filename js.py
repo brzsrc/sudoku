@@ -307,6 +307,24 @@ def find_hard_files():
                 if not out_file.exists():
                     print(out_file)
 
+
+def read_easy_files():
+    for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+        files = _get_files(directory)
+        for file in files:
+
+            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
+                h_name = h.__name__
+                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.pkl')
+                if not out_file.exists():
+                    continue
+                try:
+                    with open(file, 'rb') as f:
+                        _ = pickle.load(f)
+                except:
+                    print(f"file {file} had problem")
+
+
     # files = _get_files("9by9_cnf")
     # heuristics = [DLCS, DLIS, Rand]  # Rand, MOM, JWOneSide, JWTwoSide, JWTwoSideMin,
     #
@@ -322,8 +340,9 @@ def find_hard_files():
     #     print(f"{h_name}: {avg([r.backtracks for r in res_list])}")
 
 if __name__ == '__main__':
-    # find_hard_files()
-    main()
+    find_hard_files()
+    read_easy_files()
+    # main()
 
 
 
