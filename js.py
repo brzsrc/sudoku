@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Set, List, Dict, Optional, cast, Callable
 
-from DIMACS_parser import DIMACS_reader
+from DIMACS_parser import DIMACS_reader, DIMACS_reader_Sixteen
 
 Literal = int
 
@@ -71,7 +71,10 @@ class SodokuSolver:
     depth_profile: List[int]
 
     def __init__(self, filename: str, heuristic: Heuristic):
-        all_lit_pos, clauses = DIMACS_reader(filename)
+        if '16by16' in filename:
+            all_lit_pos, clauses = DIMACS_reader_Sixteen(filename)
+        else:
+            all_lit_pos, clauses = DIMACS_reader(filename)
         clauses = [{int(lit) for lit in cl} for cl in clauses]
 
         self.clauses = {i: [int(lit) for lit in cl] for i, cl in enumerate(clauses)}
@@ -173,8 +176,8 @@ def _get_files(directory: str= "4by4_cnf"):
 
 
 def main():
-    files = _get_files("9by9_cnf")
-    heuristics = [Rand, MOM]  # JWOneSide, JWTwoSide,
+    files = _get_files("16by16_cnf")
+    heuristics = [Rand, MOM, JWOneSide, JWTwoSide]
     cpu_count = os.cpu_count()
     print(f"running experiment with {cpu_count} cores")
     map_ = lambda f, *iters: [f(*args) for args in zip(*iters)]
@@ -195,14 +198,27 @@ def main():
         elapsed = [r.time_elapsed for r in res_list]
         backtracks = [r.backtracks for r in res_list]
         n_steps = [len(r.depth_profile) for r in res_list]
+        filename = [r.filename for r in res_list]
 
-        plt.bar(list(range(len(elapsed))), elapsed, label='time elapsed')
-        plt.title(f"{h_name}: elapsed")
-        plt.show()
+        filepath = f"./outputs/16x16csv/{h_name}_16x16.csv"
+        with open(filepath, 'w') as file:
+            file.write("filename, time_elapsed, # of bcktrack, n_steps: \n")
+            for i in range(len(elapsed)):
+                for res in [filename, elapsed, backtracks]:
+                    file.write(f"{res[i]}, ")
+                for res in [n_steps]:
+                    file.write(f"{res[i]}")
+                file.write(f"\n")
+            
+            
 
-        plt.bar(list(range(len(backtracks))), backtracks, label='num of backtracks')
-        plt.title(f"{h_name}: backtracks")
-        plt.show()
+        # plt.bar(list(range(len(elapsed))), elapsed, label='time elapsed')
+        # plt.title(f"{h_name}: elapsed")
+        # plt.show()
+
+        # plt.bar(list(range(len(backtracks))), backtracks, label='num of backtracks')
+        # plt.title(f"{h_name}: backtracks")
+        # plt.show()
 
 
 
