@@ -236,9 +236,11 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
         solved_literals=solver.solved_literals,
         n_steps=solver.n_steps,
     )
+    h_name = type(heuristic).__name__
+
     if verbose:
         print(
-            f"{type(heuristic).__name__}"
+            f"{h_name}"
             f" | {filename=}"
             f" | {solvable=}"
             f" | {res.time_elapsed=:6f}"
@@ -247,9 +249,8 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
             f" | {res.max_depth=}"
             )
     else:
-        print(f"{type(heuristic).__name__} | {filename[5:-4]}")
-
-    out_file = (Path(__file__).parent / f"16x16_res/{filename}").with_suffix('.pkl')
+        print(f"{h_name} | {filename[5:-4]}")
+    out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{filename}").with_suffix('.pkl')
     os.makedirs(out_file.parent, exist_ok=True)
     Path(out_file).touch(exist_ok=True)
     with open(out_file, 'wb') as f:
