@@ -218,6 +218,10 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     h_name = type(heuristic).__name__
     out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{filename}").with_suffix('.json')
     os.makedirs(out_file.parent, exist_ok=True)
+    if out_file.exists():
+        with open(out_file, 'r') as f:
+            return ExperimentResult(**json.load(f))
+    out_file.touch(exist_ok=False)
 
     solver = SodokuSolver(filename, heuristic or Rand())
     t = time.perf_counter()
@@ -255,8 +259,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     else:
         print(f"{h_name} | {filename[5:-4]}")
 
-    Path(out_file).touch(exist_ok=True)
-    with open(out_file, 'wb') as f:
+    with open(out_file, 'w') as f:
         json.dump(asdict(res), f)
     return res
 
@@ -266,7 +269,7 @@ def _get_files(directory: str= "4by4_cnf"):
 
 
 def main():
-    cpu_count = 40
+    cpu_count = 50
     map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
     # avg = lambda x: sum(x) / len(x)
 
@@ -301,7 +304,7 @@ def find_hard_files():
 
             for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
                 h_name = h.__name__
-                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.pkl')
+                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
                 if not out_file.exists():
                     print(out_file)
 
@@ -313,7 +316,7 @@ def read_easy_files():
 
             for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
                 h_name = h.__name__
-                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.pkl')
+                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
                 if not out_file.exists():
                     continue
                 try:
@@ -339,8 +342,8 @@ def read_easy_files():
     #     print(f"{h_name}: {avg([r.backtracks for r in res_list])}")
 
 if __name__ == '__main__':
-    find_hard_files()
-    read_easy_files()
+    # find_hard_files()
+    # read_easy_files()
     main()
 
 
