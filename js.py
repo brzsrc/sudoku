@@ -321,8 +321,9 @@ def read_easy_files():
                 try:
                     with open(file, 'rb') as f:
                         _ = pickle.load(f)
-                except:
-                    print(f"file {file} had problem")
+                except Exception as e:
+                    raise e
+                    # print(f"file {file} had problem")
 
 
     # files = _get_files("9by9_cnf")
