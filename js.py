@@ -214,6 +214,13 @@ class ExperimentResult:
 
 
 def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = False):
+    h_name = type(heuristic).__name__
+    out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{filename}").with_suffix('.pkl')
+    if out_file.exists():
+        with open(out_file, 'rb') as f:
+            return pickle.load(f)
+    os.makedirs(out_file.parent, exist_ok=True)
+
     solver = SodokuSolver(filename, heuristic or Rand())
     t = time.perf_counter()
 
@@ -236,7 +243,6 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
         solved_literals=solver.solved_literals,
         n_steps=solver.n_steps,
     )
-    h_name = type(heuristic).__name__
 
     if verbose:
         print(
@@ -250,8 +256,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
             )
     else:
         print(f"{h_name} | {filename[5:-4]}")
-    out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{filename}").with_suffix('.pkl')
-    os.makedirs(out_file.parent, exist_ok=True)
+
     Path(out_file).touch(exist_ok=True)
     with open(out_file, 'wb') as f:
         pickle.dump(res, f)
@@ -291,6 +296,16 @@ def main():
                 results_df.to_csv(f"results/{directory}_{h_name}.csv")
 
 
+def find_hard_files():
+    for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+        files = _get_files(directory)
+        for file in files:
+
+            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
+                h_name = h.__name__
+                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.pkl')
+                if not out_file.exists():
+                    print(out_file)
 
     # files = _get_files("9by9_cnf")
     # heuristics = [DLCS, DLIS, Rand]  # Rand, MOM, JWOneSide, JWTwoSide, JWTwoSideMin,
@@ -307,7 +322,8 @@ def main():
     #     print(f"{h_name}: {avg([r.backtracks for r in res_list])}")
 
 if __name__ == '__main__':
-    main()
+    find_hard_files()
+    # main()
 
 
 
