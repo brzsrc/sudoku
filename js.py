@@ -110,6 +110,8 @@ class SodokuSolver:
     max_depth: int
     solved_literals: int
     n_steps: int
+    pos_lit_chosen: int
+    neg_lit_chosen: int
 
     def __init__(self, filename: str, heuristic: Heuristic):
         all_lit_pos, clauses = (DIMACS_reader, DIMACS_reader_Sixteen)['16by16' in filename](filename)
@@ -125,6 +127,8 @@ class SodokuSolver:
         self.pure_literals = 0
         self.solved_literals = 0
         self.n_steps = 0
+        self.pos_lit_chosen = 0
+        self.neg_lit_chosen = 0
 
     def _populate_lit_where(self):
         for i, cl in self.clauses.items():
@@ -181,6 +185,11 @@ class SodokuSolver:
         sol = self.solution.copy()
         clauses = deepcopy(self.clauses)
 
+        if lit > 0:
+            self.pos_lit_chosen += 1
+        else:
+            self.neg_lit_chosen += 1
+
         if self.solve_literal(lit) and self.solve(depth + 1):
             return True
 
@@ -201,6 +210,8 @@ class ExperimentResult:
     pure_literals: int
     solved_literals: int
     n_steps: int
+    pos_lit_chosen: int
+    neg_lit_chosen: int
 
 
 def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = False):
@@ -224,6 +235,8 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
         pure_literals=solver.pure_literals,
         solved_literals=solver.solved_literals,
         n_steps=solver.n_steps,
+        pos_lit_chosen=solver.pos_lit_chosen,
+        neg_lit_chosen=solver.neg_lit_chosen,
     )
 
     if verbose:
@@ -278,6 +291,16 @@ def main():
                 results_df.to_csv(f"results/{directory}_{h_name}.csv")
 
 
+def main_v2():
+    cpu_count = max(1, os.cpu_count() - 4)
+    with PPool(max_workers=cpu_count) as pool:
+        for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+            files = _get_files(directory)
+            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+                for file in files:
+                    pool.submit(run_experiment, file, h())
+
+
 def find_hard_files():
     for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
         files = _get_files(directory)
@@ -312,7 +335,8 @@ def read_easy_files():
 if __name__ == '__main__':
     # find_hard_files()
     # read_easy_files()
-    main()
+    # main()
+    main_v2()
 
 
 
