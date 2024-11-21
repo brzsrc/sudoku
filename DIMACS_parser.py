@@ -116,10 +116,10 @@ def DIMACS_reader_Sixteen(file):
         lines = f.readlines()
 
         symbols = set()
-        for row in range(16):
-            for column in range(16):
-                for value in range(16):
-                        symbols.add(str(17 * 17 * (row + 1) + 17 * (column + 1) + value+1))
+        # for row in range(16):
+        #     for column in range(16):
+        #         for value in range(16):
+        #                 symbols.add(str(17 * 17 * (row + 1) + 17 * (column + 1) + value+1))
 
         clauses = []
         for line in lines[1:]:
@@ -134,19 +134,30 @@ def DIMACS_reader(file):
     #within 10*10 puzzle
     with open(file,"r") as f:
         lines = f.readlines()
-        para = lines[0].split(" ")[2]
+        # para = lines[0].split(" ")[2]
         symbols = set()
-        for i in range(100,1000):
-            if "0" not in str(i) and str(i)[0] <= para[0] and str(i)[1] <= para[1] and str(i)[2] <= para[2] :
-                symbols.add(str(i))
+        # for i in range(100,1000):
+        #     if "0" not in str(i) and str(i)[0] <= para[0] and str(i)[1] <= para[1] and str(i)[2] <= para[2] :
+        #         symbols.add(str(i))
 
         clauses = []
-        for line in lines[1:]:
-            clause = line[:-1].split(" ")
-            end_point = clause.index("0")
-            clause = clause[:end_point]
-            clauses.append(set(clause))
+        begin_line = 0
 
+        for i, line in enumerate(lines):
+            fst_char = line.split(" ")[0]
+            if fst_char == 'p':
+                begin_line = i+1
+
+        for line in lines[begin_line:]:
+            clause = line.split(" ")
+            # print(clause)
+            if '0\n' in clause:
+                end_point = clause.index("0\n")
+            else:
+                end_point = clause.index("0")
+            clause = clause[:end_point]
+            # print(clause)
+            clauses.append(set(clause))
         return symbols, clauses
 
 
