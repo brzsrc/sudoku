@@ -332,6 +332,7 @@ def run_all_experiments(directory: str):
         for task in as_completed(tasks):
             task.result()
 
+
 def collect(directory: str, heuristic: Heuristic):
     return pd.DataFrame([json.loads(_get_json_file(file, heuristic).read_text()) for file in _get_files(directory)])
 
@@ -446,4 +447,5 @@ def _run_9x9():
 
 
 if __name__ == '__main__':
-    _run_9x9()
+    count_missing()
+    # _run_9x9()
