@@ -345,7 +345,8 @@ def read_easy_files():
 
 
 if __name__ == '__main__':
-    find_hard_files()
+    # find_hard_files()
+    count_missing_files()
     # read_easy_files()
     # main()
     # main_v2()
