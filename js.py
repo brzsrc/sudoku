@@ -1,6 +1,5 @@
 import json
 import os
-import pickle
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
@@ -330,21 +329,6 @@ def read_easy_files():
                 except Exception as e:
                     # raise e
                     print(f"file {out_file} had problem")
-
-
-    # files = _get_files("9by9_cnf")
-    # heuristics = [DLCS, DLIS, Rand]  # Rand, MOM, JWOneSide, JWTwoSide, JWTwoSideMin,
-    #
-    # t = time.perf_counter()
-        # result_futures = {
-        #     h: (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
-        #     for h in heuristics
-        # }
-        # results = {k: list(v) for k, v in result_futures.items()}
-    #
-    # for h, res_list in results.items():
-    #     res_list: List[ExperimentResult]
-    #     print(f"{h_name}: {avg([r.backtracks for r in res_list])}")
 
 if __name__ == '__main__':
     # find_hard_files()
