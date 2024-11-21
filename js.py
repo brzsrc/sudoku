@@ -273,7 +273,7 @@ def _get_files(directory: str= "4by4_cnf"):
 
 
 def main():
-    cpu_count = 4
+    cpu_count = 6
     map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
     # avg = lambda x: sum(x) / len(x)
 
@@ -333,8 +333,8 @@ def read_easy_files():
 
 if __name__ == '__main__':
     # find_hard_files()
-    read_easy_files()
-    # main()
+    # read_easy_files()
+    main()
 
 
 
