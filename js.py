@@ -1,13 +1,15 @@
 import json
 import os
+import random
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict, Counter
+from concurrent.futures import as_completed, Future
 from concurrent.futures.process import ProcessPoolExecutor as PPool
 from copy import deepcopy
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Set, List, Dict, Optional, cast, Callable
+from typing import List, Dict, Optional, cast, Callable
 
 import pandas as pd
 
@@ -24,7 +26,12 @@ class Heuristic(ABC):
 
 class Rand(Heuristic):
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
-        return min(clauses[min(clauses)])
+        return random.choice([lit for cl in clauses.values() for lit in cl])
+
+
+class RandPos(Heuristic):
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        return random.choice([lit for cl in clauses.values() for lit in cl if lit >= 0])
 
 
 class Max(Heuristic):
@@ -43,6 +50,19 @@ class JWOneSide(Heuristic):
         return max(lit_weights, key=lit_weights.get)
 
 
+class JWOneSidePos(Heuristic):
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        lit_weights = defaultdict(int)
+        for cl in clauses.values():
+            for lit in cl:
+                if lit < 0:
+                    continue
+                lit_weights[lit] += 2 ** -len(cl)
+
+        return max(lit_weights, key=lit_weights.get)
+
+
 class JWTwoSide(Heuristic):
 
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
@@ -55,7 +75,7 @@ class JWTwoSide(Heuristic):
         return max([lit, -lit], key=lit_weights.get)
 
 
-class JWTwoSideMin(Heuristic):
+class JWTwoSidePos(Heuristic):
 
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
         lit_weights = defaultdict(int)
@@ -63,8 +83,7 @@ class JWTwoSideMin(Heuristic):
             for lit in cl:
                 lit_weights[lit] += 2 ** -len(cl)
 
-        lit = min(lit_weights, key=lambda x: lit_weights[x] + lit_weights[-x])
-        return min([lit, -lit], key=lit_weights.get)
+        return max([lit for lit in lit_weights if lit >= 0], key=lambda x: lit_weights[x] + lit_weights[-x])
 
 
 class DLCS(Heuristic):
@@ -100,7 +119,25 @@ class MOM(Heuristic):
             for lit in clauses[cl]:
                 f[lit] += 1
 
-        return max(list(f), key=formula)
+        return max(f, key=formula)
+
+
+class MOMPos(Heuristic):
+    k = 2
+
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        f = defaultdict(int)
+        formula = cast(Callable, lambda x: (f[x] + f[-x]) * 2 ** self.k + f[x] * f[-x])
+        len_dict = {i: len(cl) for i, cl in clauses.items()}
+        min_len = min(len_dict.values())
+
+        min_cl = [i for i, len_ in len_dict.items() if len_ == min_len]
+
+        for cl in min_cl:
+            for lit in clauses[cl]:
+                f[lit] += 1
+
+        return max([lit for lit in f if lit >= 0], key=formula)
 
 
 class SodokuSolver:
@@ -214,13 +251,38 @@ class ExperimentResult:
     neg_lit_chosen: int
 
 
-def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose: bool = False):
+ALL_HEURISTICS = [
+    Rand(),
+    RandPos(),
+    Max(),
+    JWOneSide(),
+    JWOneSidePos(),
+    JWTwoSide(),
+    JWTwoSidePos(),
+    DLCS(),
+    DLIS(),
+    MOM(),
+    MOMPos(),
+]
+JSON_DIR = Path(__file__).parent / "JSON_RESULTS"
+CSV_DIR = Path(__file__).parent / "CSV_RESULTS"
+INPUT_DIRS = ["4by4_cnf", "9by9_cnf", "16by16_cnf"]
+
+
+def _get_json_file(filename: str, heuristic: Heuristic):
+    return (JSON_DIR / f"{type(heuristic).__name__}/{filename}").with_suffix('.json')
+
+
+def _get_files(directory: str):
+    return [f'{directory}/{file}' for file in sorted(os.listdir(directory), key=lambda x: int(x[5:-4]))]
+
+
+def run_experiment(filename: str, heuristic: Heuristic, verbose: bool = False):
     h_name = type(heuristic).__name__
-    out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{filename}").with_suffix('.json')
-    os.makedirs(out_file.parent, exist_ok=True)
-    if out_file.exists():
-        with open(out_file, 'r') as f:
-            return ExperimentResult(**json.load(f))
+    file = _get_json_file(filename, heuristic)
+
+    if file.exists():
+        return ExperimentResult(**json.loads(file.read_text()))
 
     solver = SodokuSolver(filename, heuristic or Rand())
     t = time.perf_counter()
@@ -252,101 +314,136 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     else:
         print(f"{h_name} | {filename[5:-4]}")
 
-    out_file.touch(exist_ok=False)
-    with open(out_file, 'w') as f:
-        json.dump(asdict(res), f)
+    os.makedirs(file.parent, exist_ok=True)
+    file.touch()
+    file.write_text(json.dumps(asdict(res)))
     return res
 
 
-def _get_files(directory: str = "4by4_cnf"):
-    return [f'{directory}/{file}' for file in sorted(os.listdir(directory), key=lambda x: int(x[5:-4]))]
-
-
-def main():
-    cpu_count = max(1, os.cpu_count() - 4)
-    map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
-    # avg = lambda x: sum(x) / len(x)
-
-    with PPool(max_workers=cpu_count) as pool:
-        for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
-            files = _get_files(directory)
-
-            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
-                h_name = h.__name__
-                results: List[ExperimentResult] = list(
-                    (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
-                )
-                results_df = pd.DataFrame({
-                    "filename": [res.filename for res in results],
-                    "solvable": [res.solvable for res in results],
-                    "time_elapsed": [res.time_elapsed for res in results],
-                    # "literals": [list(res.literals) for res in results],
-                    "max_depth": [res.max_depth for res in results],
-                    "backtracks": [res.backtracks for res in results],
-                    # "pure_literals": [res.pure_literals for res in results],
-                    "solved_literals": [res.solved_literals for res in results],
-                    "n_steps": [res.n_steps for res in results],
-                    "heuristic_used": [h_name] * len(results)
-                })
-                results_df.to_csv(f"results/{directory}_{h_name}.csv")
-
-
-def main_v2():
+def run_all_experiments(directory: str):
     cpu_count = max(1, os.cpu_count() - 4)
     with PPool(max_workers=cpu_count) as pool:
-        for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
-            files = _get_files(directory)
-            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
-                for file in files:
-                    pool.submit(run_experiment, file, h())
-
-
-def find_hard_files():
-    for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+        tasks = []
         files = _get_files(directory)
-        for file in files:
+        for heuristic in ALL_HEURISTICS:
+            for file in files:
+                tasks.append(pool.submit(run_experiment, file, heuristic))
 
-            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
-                h_name = h.__name__
-                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
-                if not out_file.exists():
-                    print(out_file)
+        for task in as_completed(tasks):
+            task.result()
+
+def collect(directory: str, heuristic: Heuristic):
+    return pd.DataFrame([json.loads(_get_json_file(file, heuristic).read_text()) for file in _get_files(directory)])
 
 
-def count_missing_files():
-    for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+# def run_and_collect(directory: str, heuristic: Heuristic):
+#     cpu_count = max(1, os.cpu_count() - 4)
+#     files = _get_files(directory)
+#     with PPool(max_workers=cpu_count) as pool:
+#         results = pool.map(run_experiment, files, [heuristic] * len(files))
+#         return pd.DataFrame(list(map(asdict, results)))
+
+
+def count_missing():
+    for directory in INPUT_DIRS:
         files = _get_files(directory)
-        for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
-            h_name = h.__name__
+        for heuristic in ALL_HEURISTICS:
             missing = 0
             for file in files:
-                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
-                missing += not out_file.exists()
-            print(f"{h_name} missing {missing}")
+                missing += not _get_json_file(file, heuristic).exists()
+            print(f"{heuristic.__name__}: {missing} / {len(files)} missing")
 
 
-def read_easy_files():
-    for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
-        files = _get_files(directory)
-        for file in files:
+def _run_9x9():
+    directory = INPUT_DIRS[1]
+    run_all_experiments(directory)
 
-            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:2]:
-                h_name = h.__name__
-                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
-                if not out_file.exists():
-                    continue
-                try:
-                    with open(out_file, 'r') as f:
-                        _ = json.load(f)
-                except Exception as e:
-                    # raise e
-                    print(f"file {out_file} had problem")
-                    os.remove(out_file)
+    for heuristic in ALL_HEURISTICS:
+        csv_file = (CSV_DIR / f"{type(heuristic).__name__}/{directory}").with_suffix('.csv')
+        collect(directory, heuristic).to_csv(csv_file)
+
+
+# def main():
+#     cpu_count = max(1, os.cpu_count() - 4)
+#     map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
+#     # avg = lambda x: sum(x) / len(x)
+#
+#     with PPool(max_workers=cpu_count) as pool:
+#         for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+#             files = _get_files(directory)
+#
+#             for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+#                 h_name = h.__name__
+#                 results: List[ExperimentResult] = list(
+#                     (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
+#                 )
+#                 results_df = pd.DataFrame({
+#                     "filename": [res.filename for res in results],
+#                     "solvable": [res.solvable for res in results],
+#                     "time_elapsed": [res.time_elapsed for res in results],
+#                     # "literals": [list(res.literals) for res in results],
+#                     "max_depth": [res.max_depth for res in results],
+#                     "backtracks": [res.backtracks for res in results],
+#                     # "pure_literals": [res.pure_literals for res in results],
+#                     "solved_literals": [res.solved_literals for res in results],
+#                     "n_steps": [res.n_steps for res in results],
+#                     "heuristic_used": [h_name] * len(results)
+#                 })
+#                 results_df.to_csv(f"results/{directory}_{h_name}.csv")
+
+
+# def main_v2():
+#     cpu_count = max(1, os.cpu_count() - 4)
+#     with PPool(max_workers=cpu_count) as pool:
+#         for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+#             files = _get_files(directory)
+#             for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+#                 for file in files:
+#                     pool.submit(run_experiment, file, h())
+
+
+# def find_hard_files():
+#     for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+#         files = _get_files(directory)
+#         for file in files:
+#
+#             for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+#                 h_name = h.__name__
+#                 out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
+#                 if not out_file.exists():
+#                     print(out_file)
+
+
+# def count_missing_files():
+#     for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+#         files = _get_files(directory)
+#         for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+#             h_name = h.__name__
+#             missing = 0
+#             for file in files:
+#                 out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
+#                 missing += not out_file.exists()
+#             print(f"{h_name} missing {missing}")
+
+
+# def read_easy_files():
+#     for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+#         files = _get_files(directory)
+#         for file in files:
+#
+#             for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:2]:
+#                 h_name = h.__name__
+#                 out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
+#                 if not out_file.exists():
+#                     continue
+#                 try:
+#                     with open(out_file, 'r') as f:
+#                         _ = json.load(f)
+#                 except Exception as e:
+#                     # raise e
+#                     print(f"file {out_file} had problem")
+#                     os.remove(out_file)
 
 
 if __name__ == '__main__':
-    # find_hard_files()
-    count_missing_files()
-    # read_easy_files()
-    # main()
-    # main_v2()
+    _run_9x9()
