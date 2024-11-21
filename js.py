@@ -119,7 +119,7 @@ class MOM(Heuristic):
             for lit in clauses[cl]:
                 f[lit] += 1
 
-        return max(f, key=formula)
+        return max(list(f), key=formula)
 
 
 class MOMPos(Heuristic):
@@ -352,7 +352,7 @@ def count_missing():
             missing = 0
             for file in files:
                 missing += not _get_json_file(file, heuristic).exists()
-            print(f"{heuristic.__name__}: {missing} / {len(files)} missing")
+            print(f"{type(heuristic).__name__}: {missing} / {len(files)} missing")
 
 
 def _run_9x9():
