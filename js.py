@@ -320,13 +320,13 @@ def run_experiment(filename: str, heuristic: Heuristic, verbose: bool = False):
     return res
 
 
-def run_all_experiments(directory: str):
+def run_all_experiments(directory: str, first_n_files: Optional[int] = None):
     cpu_count = max(1, os.cpu_count() - 4)
     with PPool(max_workers=cpu_count) as pool:
         tasks = []
         files = _get_files(directory)
-        for heuristic in ALL_HEURISTICS:
-            for file in files:
+        for file in files[:first_n_files]:
+            for heuristic in ALL_HEURISTICS:
                 tasks.append(pool.submit(run_experiment, file, heuristic))
 
         for task in as_completed(tasks):
@@ -356,8 +356,7 @@ def count_missing():
             print(f"{type(heuristic).__name__}/{directory}: {missing} / {len(files)} missing")
 
 
-def _run_9x9():
-    directory = INPUT_DIRS[1]
+def run_directory(directory: str):
     run_all_experiments(directory)
 
     for heuristic in ALL_HEURISTICS:
@@ -449,5 +448,6 @@ def _run_9x9():
 
 
 if __name__ == '__main__':
-    count_missing()
-    _run_9x9()
+    run_all_experiments(INPUT_DIRS[2], first_n_files=100)
+    # count_missing()
+    # _run_9x9()
