@@ -329,6 +329,7 @@ def read_easy_files():
                 except Exception as e:
                     # raise e
                     print(f"file {out_file} had problem")
+                    os.remove(out_file)
 
 if __name__ == '__main__':
     # find_hard_files()
