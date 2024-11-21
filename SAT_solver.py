@@ -1,11 +1,7 @@
-import os
-import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
-from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS,to_DIMACS_Sixteen,DIMACS_reader_Sixteen
-from DPLL import dpll
-from js import Heuristic, Rand, JWOneSide, JWTwoSide, MOM, SodokuSolver
+from DIMACS_parser import tt_to_dimacs, save_dimacs
+from js import Rand, JWOneSide, JWTwoSide, MOM, SodokuSolver
 
 
 def entrypoint():
