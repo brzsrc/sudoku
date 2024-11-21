@@ -32,6 +32,11 @@ class Rand(Heuristic):
         return min(clauses[min(clauses)])
 
 
+class Max(Heuristic):
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        return max(lit for cl in clauses.values() for lit in cl)
+
+
 class JWOneSide(Heuristic):
 
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
@@ -314,7 +319,7 @@ def read_easy_files():
         files = _get_files(directory)
         for file in files:
 
-            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
+            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
                 h_name = h.__name__
                 out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
                 if not out_file.exists():
