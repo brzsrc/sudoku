@@ -313,6 +313,18 @@ def find_hard_files():
                     print(out_file)
 
 
+def count_missing_files():
+    for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
+        files = _get_files(directory)
+        for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+            h_name = h.__name__
+            missing = 0
+            for file in files:
+                out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
+                missing += not out_file.exists()
+            print(f"{h_name} missing {missing}")
+
+
 def read_easy_files():
     for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
         files = _get_files(directory)
