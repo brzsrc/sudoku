@@ -362,6 +362,7 @@ def _run_9x9():
 
     for heuristic in ALL_HEURISTICS:
         csv_file = (CSV_DIR / f"{type(heuristic).__name__}/{directory}").with_suffix('.csv')
+        os.makedirs(csv_file.parent, exist_ok=True)
         collect(directory, heuristic).to_csv(csv_file)
 
 
