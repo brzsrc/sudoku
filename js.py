@@ -348,11 +348,12 @@ def collect(directory: str, heuristic: Heuristic):
 def count_missing():
     for directory in INPUT_DIRS:
         files = _get_files(directory)
+        print(directory.center(80, '='))
         for heuristic in ALL_HEURISTICS:
             missing = 0
             for file in files:
                 missing += not _get_json_file(file, heuristic).exists()
-            print(f"{type(heuristic).__name__}: {missing} / {len(files)} missing")
+            print(f"{type(heuristic).__name__}/{directory}: {missing} / {len(files)} missing")
 
 
 def _run_9x9():
@@ -448,4 +449,4 @@ def _run_9x9():
 
 if __name__ == '__main__':
     count_missing()
-    # _run_9x9()
+    _run_9x9()
