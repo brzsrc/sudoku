@@ -226,7 +226,6 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     if out_file.exists():
         with open(out_file, 'r') as f:
             return ExperimentResult(**json.load(f))
-    out_file.touch(exist_ok=False)
 
     solver = SodokuSolver(filename, heuristic or Rand())
     t = time.perf_counter()
@@ -264,6 +263,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     else:
         print(f"{h_name} | {filename[5:-4]}")
 
+    out_file.touch(exist_ok=False)
     with open(out_file, 'w') as f:
         json.dump(asdict(res), f)
     return res
@@ -274,7 +274,7 @@ def _get_files(directory: str= "4by4_cnf"):
 
 
 def main():
-    cpu_count = 50
+    cpu_count = 4
     map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
     # avg = lambda x: sum(x) / len(x)
 
@@ -282,7 +282,7 @@ def main():
         for directory in ["4by4_cnf", "9by9_cnf", "16by16_cnf"][2:]:
             files = _get_files(directory)
 
-            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
+            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
                 h_name = h.__name__
                 results: List[ExperimentResult] = list(
                     (map_, pool.map)[cpu_count > 1](run_experiment, files, [h()] * len(files))
@@ -319,17 +319,17 @@ def read_easy_files():
         files = _get_files(directory)
         for file in files:
 
-            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
+            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][1:2]:
                 h_name = h.__name__
                 out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
                 if not out_file.exists():
                     continue
                 try:
-                    with open(file, 'rb') as f:
-                        _ = pickle.load(f)
+                    with open(out_file, 'r') as f:
+                        _ = json.load(f)
                 except Exception as e:
-                    raise e
-                    # print(f"file {file} had problem")
+                    # raise e
+                    print(f"file {out_file} had problem")
 
 
     # files = _get_files("9by9_cnf")
