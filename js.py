@@ -87,7 +87,7 @@ class DLIS(Heuristic):
 
 class MOM(Heuristic):
     k = 2
-    
+
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
         f = defaultdict(int)
         formula = cast(Callable, lambda x: (f[x] + f[-x]) * 2 ** self.k + f[x] * f[-x])
@@ -248,7 +248,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
             f" | {res.backtracks=}"
             f" | {res.pure_literals=}"
             f" | {res.max_depth=}"
-            )
+        )
     else:
         print(f"{h_name} | {filename[5:-4]}")
 
@@ -258,7 +258,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
     return res
 
 
-def _get_files(directory: str= "4by4_cnf"):
+def _get_files(directory: str = "4by4_cnf"):
     return [f'{directory}/{file}' for file in sorted(os.listdir(directory), key=lambda x: int(x[5:-4]))]
 
 
@@ -306,7 +306,7 @@ def find_hard_files():
         files = _get_files(directory)
         for file in files:
 
-            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:1]:
+            for h in [Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS]:
                 h_name = h.__name__
                 out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
                 if not out_file.exists():
@@ -333,10 +333,7 @@ def read_easy_files():
 
 
 if __name__ == '__main__':
-    # find_hard_files()
+    find_hard_files()
     # read_easy_files()
     # main()
-    main_v2()
-
-
-
+    # main_v2()
