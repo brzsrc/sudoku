@@ -16,10 +16,6 @@ from DIMACS_parser import DIMACS_reader, DIMACS_reader_Sixteen
 Literal = int
 
 
-class Unsolvable(Exception):
-    pass
-
-
 class Heuristic(ABC):
 
     @abstractmethod
@@ -135,9 +131,9 @@ class SodokuSolver:
             for lit in cl:
                 self.lit_where[lit].append(i)
 
-    def solve_literal(self, literal: Literal) -> None:
+    def solve_literal(self, literal: Literal) -> bool:
         if -literal in self.solution:
-            raise Unsolvable()
+            return False
         assert literal not in self.solution
 
         for clause_idx in self.lit_where[literal]:
@@ -151,58 +147,47 @@ class SodokuSolver:
 
             self.clauses[clause_idx].remove(-literal)
             if not self.clauses[clause_idx]:
-                raise Unsolvable()
+                return False
 
         self.solution[abs(literal)] = literal > 0
         self.solved_literals += 1
+        return True
 
-    def simplify(self) -> None:
+    def simplify(self) -> bool:
         change = True
         while change:
             change = False
             for cl_idx, cl in self.clauses.items():
                 if len(cl) == 1:
                     del self.clauses[cl_idx]
-                    self.solve_literal(cl[0])
+                    if not self.solve_literal(cl[0]):
+                        return False
+
                     change = True
                     break
+        return True
 
-    def remove_pure_literals(self):
-        for literal in self.lit_where:
-            if abs(literal) in self.solution:
-                continue
-            if not any(map(self.clauses.__contains__, self.lit_where[-literal])):
-                self.solve_literal(literal)
-                self.pure_literals += 1
-
-    def solve(self, depth: int = 0):
+    def solve(self, depth: int = 0) -> bool:
         self.n_steps += 1
-        try:
-            self.remove_pure_literals()
-        except Unsolvable as e:
-            raise Unsolvable(f"Unsolvable in `remove_pure_literals` at depth {depth}") from e
-
         self.max_depth = max(self.max_depth, depth)
-        self.simplify()
+
+        if not self.simplify():
+            return False
 
         if not self.clauses:
-            return self.solution
+            return True
 
         lit = self.heuristic.choose(self.clauses)
         sol = self.solution.copy()
         clauses = deepcopy(self.clauses)
 
-        try:
-            self.solve_literal(lit)
-            return self.solve(depth + 1)
+        if self.solve_literal(lit) and self.solve(depth + 1):
+            return True
 
-        except Unsolvable:
-            self.solution = sol
-            self.clauses = clauses
-            self.backtracks += 1
-            self.solve_literal(-lit)
-
-            return self.solve(depth + 1)
+        self.solution = sol
+        self.clauses = clauses
+        self.backtracks += 1
+        return self.solve_literal(-lit) and self.solve(depth + 1)
 
 
 @dataclass
@@ -228,15 +213,7 @@ def run_experiment(filename: str, heuristic: Optional[Heuristic] = None, verbose
 
     solver = SodokuSolver(filename, heuristic or Rand())
     t = time.perf_counter()
-
-    # try:
-    solution = solver.solve()
-    solvable = True
-
-    # except Unsolvable:
-    #     solvable = False
-    #     solution = {}
-
+    solvable = solver.solve()
     res = ExperimentResult(
         filename=filename,
         solvable=solvable,
@@ -273,7 +250,7 @@ def _get_files(directory: str= "4by4_cnf"):
 
 
 def main():
-    cpu_count = 6
+    cpu_count = max(1, os.cpu_count() - 4)
     map_ = (lambda x: x)(lambda f, *iters: [f(*args) for args in zip(*iters)])
     # avg = lambda x: sum(x) / len(x)
 
@@ -330,6 +307,7 @@ def read_easy_files():
                     # raise e
                     print(f"file {out_file} had problem")
                     os.remove(out_file)
+
 
 if __name__ == '__main__':
     # find_hard_files()
