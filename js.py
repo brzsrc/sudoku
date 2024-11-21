@@ -318,7 +318,7 @@ def read_easy_files():
         files = _get_files(directory)
         for file in files:
 
-            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][1:2]:
+            for h in [Max, Rand, MOM, JWOneSide, JWTwoSide, DLCS, DLIS][:2]:
                 h_name = h.__name__
                 out_file = (Path(__file__).parent / f"16x16_res/{h_name}_{file}").with_suffix('.json')
                 if not out_file.exists():
@@ -332,8 +332,8 @@ def read_easy_files():
 
 if __name__ == '__main__':
     # find_hard_files()
-    # read_easy_files()
-    main()
+    read_easy_files()
+    # main()
 
 
 
