@@ -39,6 +39,11 @@ class Max(Heuristic):
         return max(lit for cl in clauses.values() for lit in cl)
 
 
+class FirstPos(Heuristic):
+    def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
+        return [lit for cl in clauses.values() for lit in cl][0]
+
+
 class JWOneSide(Heuristic):
 
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
@@ -252,17 +257,18 @@ class ExperimentResult:
 
 
 ALL_HEURISTICS = [
-    Rand(),
-    RandPos(),
+    # RandPos(),
     Max(),
-    JWOneSide(),
-    JWOneSidePos(),
-    JWTwoSide(),
-    JWTwoSidePos(),
-    DLCS(),
-    DLIS(),
+    RandPos(),
+    Rand(),
     MOM(),
-    MOMPos(),
+    # JWTwoSide(),
+    # JWOneSide(),
+    # JWOneSidePos(),
+    # JWTwoSidePos(),
+    # DLCS(),
+    # DLIS(),
+    # MOMPos(),
 ]
 JSON_DIR = Path(__file__).parent / "JSON_RESULTS"
 CSV_DIR = Path(__file__).parent / "CSV_RESULTS"
