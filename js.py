@@ -465,7 +465,7 @@ def run_directory(directory: str):
 
 if __name__ == '__main__':
     # run_directory(INPUT_DIRS[1])
-    run_all_experiments(INPUT_DIRS[2], first_n_files=400)
+    run_all_experiments(INPUT_DIRS[2])
     # collect_to_csv(INPUT_DIRS[2], ALL_HEURISTICS)
     # count_missing()
     # _run_9x9()
