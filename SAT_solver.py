@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from DIMACS_parser import tt_to_dimacs, save_dimacs
-from js import Rand, JWOneSide, JWTwoSide, MOM, SodokuSolver
+from dpll import Rand, JWOneSide, JWTwoSide, MOM, SodokuSolver, DLCS, DLIS, FirstPos, Max
 
 
 def entrypoint():
@@ -11,7 +11,7 @@ def entrypoint():
     -S3: jw_ts
     -S4: mom
     '''
-    sn_map = {'-S1': Rand(), '-S2': JWOneSide(), '-S3': JWTwoSide(), '-S4': MOM()}
+    sn_map = {'-S1': Rand(), '-S2': JWOneSide(), '-S3': JWTwoSide(), '-S4': MOM(), '-S5': DLCS(), '-S6': DLIS(), '-S7': FirstPos(), '-S8': Max()}
 
     print(sys.argv)
     assert len(sys.argv) == 3
