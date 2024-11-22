@@ -41,7 +41,7 @@ class Max(Heuristic):
 
 class FirstPos(Heuristic):
     def choose(self, clauses: Dict[int, List[Literal]]) -> Literal:
-        return [lit for cl in clauses.values() for lit in cl][0]
+        return [lit for cl in clauses.values() for lit in cl if lit >= 0][0]
 
 
 class JWOneSide(Heuristic):
@@ -270,6 +270,7 @@ ALL_HEURISTICS = [
     # DLIS(),
     # MOMPos(),
 ]
+# ALL_HEURISTICS = [FirstPos()]
 JSON_DIR = Path(__file__).parent / "JSON_RESULTS"
 CSV_DIR = Path(__file__).parent / "CSV_RESULTS"
 INPUT_DIRS = ["4by4_cnf", "9by9_cnf", "16by16_cnf"]
@@ -340,7 +341,16 @@ def run_all_experiments(directory: str, first_n_files: Optional[int] = None):
 
 
 def collect(directory: str, heuristic: Heuristic):
-    return pd.DataFrame([json.loads(_get_json_file(file, heuristic).read_text()) for file in _get_files(directory)])
+    return pd.DataFrame([
+        json.loads(f.read_text()) for file in _get_files(directory)
+        if (f := _get_json_file(file, heuristic)).exists()
+    ])
+
+
+def collect_to_csv(directory: str, heuristic: Heuristic):
+    csv_file = (CSV_DIR / f"{type(heuristic).__name__}/{directory}").with_suffix('.csv')
+    os.makedirs(csv_file.parent, exist_ok=True)
+    collect(directory, heuristic).to_csv(csv_file)
 
 
 # def run_and_collect(directory: str, heuristic: Heuristic):
@@ -454,6 +464,8 @@ def run_directory(directory: str):
 
 
 if __name__ == '__main__':
-    run_all_experiments(INPUT_DIRS[2], first_n_files=100)
+    # run_directory(INPUT_DIRS[1])
+    run_all_experiments(INPUT_DIRS[2], first_n_files=400)
+    # collect_to_csv(INPUT_DIRS[2], ALL_HEURISTICS)
     # count_missing()
     # _run_9x9()
