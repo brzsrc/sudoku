@@ -1,13 +1,11 @@
 from typing import Dict, List, Set, Tuple
 import numpy as np
 import os
-# from DPLL import dpll
+from pathlib import Path
 
 def to_DIMACS_Sixteen(state_file,rule_file):
     # the rows num of out_file of 4*4 is 455 = 1 + 6 + 7*(4*4*4)
     # the rows num of out_file of 9*9 is 12010 = 1 + 21 + 37*(9*9*4)
-
-
 
     #for states
     cnf_list = []
@@ -109,47 +107,32 @@ def to_DIMACS(size,state_file,rule_file):
                 t.write(f"{i}")
 
 
-
-def DIMACS_reader_Sixteen(file):
-    with open(file,"r") as f:
-        lines = f.readlines()
-
-        symbols = set()
-        for row in range(16):
-            for column in range(16):
-                for value in range(16):
-                        symbols.add(str(17 * 17 * (row + 1) + 17 * (column + 1) + value+1))
-
-        clauses = []
-        for line in lines[1:]:
-            clause = line[:-1].split(" ")
-            end_point = clause.index("0")
-            clause = clause[:end_point]
-            clauses.append(set(clause))
-
-        return symbols, clauses
-
 def DIMACS_reader(file):
     #within 10*10 puzzle
     with open(file,"r") as f:
         lines = f.readlines()
-        para = lines[0].split(" ")[2]
-        symbols = set()
-        for i in range(100,1000):
-            if "0" not in str(i) and str(i)[0] <= para[0] and str(i)[1] <= para[1] and str(i)[2] <= para[2] :
-                symbols.add(str(i))
 
+        symbols = set()
         clauses = []
-        for line in lines[1:]:
-            clause = line[:-1].split(" ")
-            end_point = clause.index("0")
+        begin_line = 0
+
+        for i, line in enumerate(lines):
+            fst_char = line.split(" ")[0]
+            if fst_char == 'p':
+                begin_line = i+1
+
+        for line in lines[begin_line:]:
+            clause = line.split(" ")
+            if '0\n' in clause:
+                end_point = clause.index("0\n")
+            else:
+                end_point = clause.index("0")
             clause = clause[:end_point]
             clauses.append(set(clause))
-
         return symbols, clauses
 
 
-def tt_to_dimacs(truth_table: Dict[str, bool],if_solved:bool):
+def tt_to_dimacs(truth_table: Dict[str, bool], if_solved:bool):
     sorted(truth_table)
     if not truth_table:
         return ""
@@ -177,7 +160,12 @@ def save_dimacs(content: str, filename: str):
     """
     Save a string content into a DIMACS file.
     """
+
+    filename = filename.removesuffix(".cnf")
     filepath = f"./outputs/{filename}.output"
+    filepath_parent = Path(filepath).resolve().parent
+    if not os.path.exists(f"{filepath_parent}"):
+        os.makedirs(f"{filepath_parent}")
     with open(filepath, 'w') as file:
         file.write(content)
 

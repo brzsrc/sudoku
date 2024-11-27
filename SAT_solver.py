@@ -1,10 +1,7 @@
-import os
-import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
-from DIMACS_parser import tt_to_dimacs, save_dimacs, DIMACS_reader,to_DIMACS,to_DIMACS_Sixteen,DIMACS_reader_Sixteen
-from DPLL import dpll
+from DIMACS_parser import tt_to_dimacs, save_dimacs
+from dpll import Rand, JWOneSide, JWTwoSide, MOM, SodokuSolver, DLCS, DLIS, FirstPos, Max
 
 
 def entrypoint():
@@ -14,7 +11,7 @@ def entrypoint():
     -S3: jw_ts
     -S4: mom
     '''
-    sn_map = {'-S1': 'rand', '-S2': 'jw_os', '-S3': 'jw_ts', '-S4': 'mom'}
+    sn_map = {'-S1': Rand(), '-S2': JWOneSide(), '-S3': JWTwoSide(), '-S4': MOM(), '-S5': DLCS(), '-S6': DLIS(), '-S7': FirstPos(), '-S8': Max()}
 
     print(sys.argv)
     assert len(sys.argv) == 3
@@ -28,43 +25,12 @@ def entrypoint():
 
 
 if __name__ == '__main__':
-    path, sn = entrypoint()
-    symbols, clauses = DIMACS_reader(path)
-    solver, if_solved = dpll({}, clauses, symbols, sn)
-    print(if_solved)
-    print(solver)
-    dimacs_content = tt_to_dimacs(solver, if_solved)
-    save_dimacs(dimacs_content,'test')
-
-    # 9*9
-    # to_DIMACS(9,"testsets/1000 sudokus.txt","sudoku-rules-9x9.txt")
-
-    # cnf_files = os.listdir("9by9_cnf")
-    # for i in cnf_files:
-    #     symbols, clauses = DIMACS_reader(f"9by9_cnf/{i}")
-    #     print(len(symbols), len(clauses))
-    #     solver, if_solved = dpll({}, clauses, symbols, 'mom')
-    #     # print(if_solved)
-    #     # print(solver)
-    #     dimacs_content = tt_to_dimacs(solver,if_solved)
-    #     save_dimacs(dimacs_content, f'{i}_solution')
-
-
-    ## 4*4
-    # to_DIMACS(4,"4x4.txt","sudoku-rules-4x4.txt")    
-    # cnf_files = os.listdir("4by4_cnf")
-    # for i in cnf_files:
-    #     symbols, clauses = DIMACS_reader(f"4by4_cnf/{i}")
-    #     solver, if_solved = dpll({}, clauses, symbols, 'jw_ts')
-    #     dimacs_content = tt_to_dimacs(solver, if_solved)
-    #     save_dimacs(dimacs_content, f'{i}_solution')
-
-
-    # 16*16
-    # to_DIMACS_Sixteen("16x16.txt","sudoku-rules-16x16.txt")
-    # symbols, clauses = DIMACS_reader_Sixteen(f"16by16_cnf/16by16_1.cnf")
-    # print(len(symbols),len(clauses))
-
+    path, heuristic = entrypoint()
+    filename = str(path)
+    solver = SodokuSolver(filename, heuristic)
+    solvable = solver.solve()
+    dimacs_content = tt_to_dimacs(solver.solution, solvable)
+    save_dimacs(dimacs_content, filename)
 
 
 
