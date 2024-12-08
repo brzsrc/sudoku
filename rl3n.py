@@ -306,9 +306,11 @@ def _grid_inner(c: float, gamma: float):
     folder = Path(__file__).parent / "RL_RES"
     os.makedirs(folder, exist_ok=True)
     f = folder / f"c_{c}_gamma_{gamma}.csv"
-    res = MCTS(Connect4Board.new(), c=c ** .5, gamma=gamma).rx(train_steps=5000, test_steps=5000, batches=20)
+    if not f.exists():
+        res = MCTS(Connect4Board.new(), c=c ** .5, gamma=gamma).rx(train_steps=5000, test_steps=5000, batches=20)
+        pd.DataFrame(res).to_csv(f)
+        return
     # printf(f"completed {c=}, {gamma=}, writing to f={f}")
-    pd.DataFrame(res).to_csv(f)
     printf(f"done: {f}")
 
 
@@ -319,7 +321,7 @@ def grid():
         for gamma in (1, .99, .95, .9, .5)
     ]
 
-    with ProcessPoolExecutor(max_workers=4) as ppool:
+    with ProcessPoolExecutor(max_workers=10) as ppool:
         procs = [ppool.submit(_grid_inner, c=c, gamma=gamma) for c, gamma in hypers]
 
         for i in range(len(procs)):
