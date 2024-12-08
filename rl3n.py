@@ -303,17 +303,19 @@ class MCTS:
 
 
 def _grid_inner(c: float, gamma: float):
-    f = Path(__file__).parent / f"c_{c}_gamma_{gamma}.csv"
-    res = MCTS(Connect4Board.new(), c=c ** .5, gamma=gamma).rx(train_steps=5000, test_steps=1000, batches=20)
+    folder = Path(__file__).parent / "RL_RES"
+    os.makedirs(folder, exist_ok=True)
+    f = folder / f"c_{c}_gamma_{gamma}.csv"
+    res = MCTS(Connect4Board.new(), c=c ** .5, gamma=gamma).rx(train_steps=5000, test_steps=5000, batches=20)
     # printf(f"completed {c=}, {gamma=}, writing to f={f}")
     pd.DataFrame(res).to_csv(f)
-    # printf(f"done: {f}")
+    printf(f"done: {f}")
 
 
 def grid():
     hypers = [
         (c, gamma)
-        for c in (2, 10, 100, 625, 2, 10, 100, 625, 2, 10, 100, 625)
+        for c in (2, 10, 100, 625, 2, 10)
         for gamma in (1, .99, .95, .9, .5)
     ]
 
