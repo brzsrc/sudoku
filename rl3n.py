@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 import random
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -300,7 +301,7 @@ def _grid_inner(c: float, gamma: float):
 
 
 def grid():
-    with ProcessPoolExecutor(max_workers=4) as ppool:
+    with ProcessPoolExecutor(max_workers=20) as ppool:
         r = {
             ppool.submit(_grid_inner, c=c ** .5, gamma=gamma): (c, gamma)
             for c in (2, 10, 100, 625)
