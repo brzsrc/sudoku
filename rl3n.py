@@ -297,11 +297,15 @@ class MCTS:
 
 
 def _grid_inner(c: float, gamma: float):
-    return MCTS(Connect4Board.new(), c=c, gamma=gamma).rx(train_steps=5000, test_steps=5000, batches=2)
+    f = CDIR / f"c_{c}_gamma_{gamma}.csv"
+    res = MCTS(Connect4Board.new(), c=c, gamma=gamma).rx(train_steps=5000, test_steps=5000, batches=2)
+    print(f"completed {c=}, {gamma=}, writing to f={f}")
+    pd.DataFrame(res).to_csv(f)
+    print(f"done: {f}")
 
 
 def grid():
-    with ProcessPoolExecutor(max_workers=5) as ppool:
+    with ProcessPoolExecutor(max_workers=20) as ppool:
         r = {
             ppool.submit(_grid_inner, c=c ** .5, gamma=gamma): (c, gamma)
             for c in (2, 10, 100, 625)
@@ -309,12 +313,9 @@ def grid():
         }
 
     for future in as_completed(r):
-        df = pd.DataFrame(future.result())
         (c, gamma) = r[future]
         print(f"COMPLETED! {c=} {gamma=}")
-        f = CDIR / f"c_{c}_gamma_{gamma}.csv"
-        df.to_csv(f)
-        print(f"written to {f}")
+        # f = CDIR / f"c_{c}_gamma_{gamma}.csv"
 
 
 if __name__ == '__main__':
