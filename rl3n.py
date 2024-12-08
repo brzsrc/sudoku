@@ -4,7 +4,8 @@ import datetime
 import math
 import os
 import random
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
@@ -12,11 +13,15 @@ from typing import Optional, Dict, List, Tuple
 import pandas as pd
 
 # os.environ["PYTHONHASHSEED"] = '0'
-random.seed(42)
+# random.seed(42)
 COLUMNS = 7
 ROWS = 6
 
 Action = int
+
+
+def printf(*args, **kwargs):
+    print(*args, **kwargs, flush=True)
 
 
 class BitMap:
@@ -298,15 +303,15 @@ class MCTS:
 
 
 def _grid_inner(c: float, gamma: float):
-    f = CDIR / f"c_{c}_gamma_{gamma}.csv"
+    f = Path(__file__).parent / f"c_{c}_gamma_{gamma}.csv"
     res = MCTS(Connect4Board.new(), c=c, gamma=gamma).rx(train_steps=10, test_steps=10, batches=2)
-    print(f"completed {c=}, {gamma=}, writing to f={f}")
+    printf(f"completed {c=}, {gamma=}, writing to f={f}")
     pd.DataFrame(res).to_csv(f)
-    print(f"done: {f}")
+    printf(f"done: {f}")
 
 
 def grid():
-    with ProcessPoolExecutor(max_workers=4, max_tasks_per_child=1) as ppool:
+    with ProcessPoolExecutor(max_workers=4) as ppool:
         r = {
             ppool.submit(_grid_inner, c=c ** .5, gamma=gamma): (c, gamma)
             for c in (2, 10, 100, 625, 2, 10, 100, 625, 2, 10, 100, 625)
@@ -316,13 +321,28 @@ def grid():
         for future in r:
             future.result()
             (c, gamma) = r[future]
-            print(f"COMPLETED! {c=} {gamma=} {datetime.datetime.now()}")
+            printf(f"COMPLETED! {c=} {gamma=} {datetime.datetime.now()}")
         # f = CDIR / f"c_{c}_gamma_{gamma}.csv"
 
 
+def test_mp_inner():
+    time.sleep(1 + random.random())
+    printf("finished task inner")
+
+
+def testing_mp():
+    with ProcessPoolExecutor(max_workers=4) as ppool:
+        procs = [ppool.submit(test_mp_inner) for _ in range(400)]
+
+        for proc in procs:
+            proc.result()
+            printf(f"fin {datetime.datetime.now()}")
+
+
 if __name__ == '__main__':
-    CDIR = Path(__file__).parent
-    grid()
+    testing_mp()
+    # CDIR = Path(__file__).parent
+    # grid()
     # MCTS(MCTS.default_board()).main(200, 100, 1000)
     # MCTS(MCTS.default_board_2()).main(200, 100, 1000)
     # MCTS(Connect4Board.new()).main(steps=1000, batch_size=499, test_steps=1)
