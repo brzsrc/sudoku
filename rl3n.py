@@ -313,10 +313,10 @@ def grid():
             for gamma in (1, .99, .95, .9, .5)
         }
 
-    for future in r:
-        future.result()
-        (c, gamma) = r[future]
-        print(f"COMPLETED! {c=} {gamma=} {datetime.datetime.now()}")
+        for future in r:
+            future.result()
+            (c, gamma) = r[future]
+            print(f"COMPLETED! {c=} {gamma=} {datetime.datetime.now()}")
         # f = CDIR / f"c_{c}_gamma_{gamma}.csv"
 
 
