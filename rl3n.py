@@ -304,25 +304,26 @@ class MCTS:
 
 def _grid_inner(c: float, gamma: float):
     f = Path(__file__).parent / f"c_{c}_gamma_{gamma}.csv"
-    res = MCTS(Connect4Board.new(), c=c, gamma=gamma).rx(train_steps=10, test_steps=10, batches=2)
-    printf(f"completed {c=}, {gamma=}, writing to f={f}")
+    res = MCTS(Connect4Board.new(), c=c ** .5, gamma=gamma).rx(train_steps=10, test_steps=10, batches=2)
+    # printf(f"completed {c=}, {gamma=}, writing to f={f}")
     pd.DataFrame(res).to_csv(f)
-    printf(f"done: {f}")
+    # printf(f"done: {f}")
 
 
 def grid():
-    with ProcessPoolExecutor(max_workers=4) as ppool:
-        r = {
-            ppool.submit(_grid_inner, c=c ** .5, gamma=gamma): (c, gamma)
-            for c in (2, 10, 100, 625, 2, 10, 100, 625, 2, 10, 100, 625)
-            for gamma in (1, .99, .95, .9, .5)
-        }
+    hypers = [
+        (c, gamma)
+        for c in (2, 10, 100, 625, 2, 10, 100, 625, 2, 10, 100, 625)
+        for gamma in (1, .99, .95, .9, .5)
+    ]
 
-        for future in r:
-            future.result()
-            (c, gamma) = r[future]
+    with ProcessPoolExecutor(max_workers=4) as ppool:
+        procs = [ppool.submit(_grid_inner, c=c, gamma=gamma) for c, gamma in hypers]
+
+        for i in range(len(procs)):
+            procs[i].result()
+            (c, gamma) = hypers[i]
             printf(f"COMPLETED! {c=} {gamma=} {datetime.datetime.now()}")
-        # f = CDIR / f"c_{c}_gamma_{gamma}.csv"
 
 
 def test_mp_inner():
@@ -340,7 +341,8 @@ def testing_mp():
 
 
 if __name__ == '__main__':
-    testing_mp()
+    grid()
+    # testing_mp()
     # CDIR = Path(__file__).parent
     # grid()
     # MCTS(MCTS.default_board()).main(200, 100, 1000)
