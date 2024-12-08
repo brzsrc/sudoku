@@ -306,7 +306,7 @@ def _grid_inner(c: float, gamma: float):
 
 
 def grid():
-    with ProcessPoolExecutor(max_workers=4) as ppool:
+    with ProcessPoolExecutor(max_workers=4, max_tasks_per_child=1) as ppool:
         r = {
             ppool.submit(_grid_inner, c=c ** .5, gamma=gamma): (c, gamma)
             for c in (2, 10, 100, 625, 2, 10, 100, 625, 2, 10, 100, 625)
