@@ -304,7 +304,7 @@ class MCTS:
 
 def _grid_inner(c: float, gamma: float):
     f = Path(__file__).parent / f"c_{c}_gamma_{gamma}.csv"
-    res = MCTS(Connect4Board.new(), c=c ** .5, gamma=gamma).rx(train_steps=10, test_steps=10, batches=2)
+    res = MCTS(Connect4Board.new(), c=c ** .5, gamma=gamma).rx(train_steps=5000, test_steps=1000, batches=20)
     # printf(f"completed {c=}, {gamma=}, writing to f={f}")
     pd.DataFrame(res).to_csv(f)
     # printf(f"done: {f}")
