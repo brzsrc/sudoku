@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import math
 import os
 import random
@@ -298,7 +299,7 @@ class MCTS:
 
 def _grid_inner(c: float, gamma: float):
     f = CDIR / f"c_{c}_gamma_{gamma}.csv"
-    res = MCTS(Connect4Board.new(), c=c, gamma=gamma).rx(train_steps=1000, test_steps=1000, batches=2)
+    res = MCTS(Connect4Board.new(), c=c, gamma=gamma).rx(train_steps=10, test_steps=10, batches=2)
     print(f"completed {c=}, {gamma=}, writing to f={f}")
     pd.DataFrame(res).to_csv(f)
     print(f"done: {f}")
@@ -308,14 +309,14 @@ def grid():
     with ProcessPoolExecutor(max_workers=4) as ppool:
         r = {
             ppool.submit(_grid_inner, c=c ** .5, gamma=gamma): (c, gamma)
-            for c in (2, 10, 100, 625)
+            for c in (2, 10, 100, 625, 2, 10, 100, 625, 2, 10, 100, 625)
             for gamma in (1, .99, .95, .9, .5)
         }
 
     for future in r:
         future.result()
         (c, gamma) = r[future]
-        print(f"COMPLETED! {c=} {gamma=}")
+        print(f"COMPLETED! {c=} {gamma=} {datetime.datetime.now()}")
         # f = CDIR / f"c_{c}_gamma_{gamma}.csv"
 
 
